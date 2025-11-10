@@ -1,0 +1,45 @@
+﻿@model IEnumerable<AppLavaluc.Models.Cliente>
+@{
+    ViewData["Title"] = "Clientes";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="text-center mt-4 mb-4">Lista de Clientes</h2>
+
+<div class="text-end mb-3">
+    <a asp-action="Crear" class="btn btn-success">
+        <i class="bi bi-person-plus"></i> Nuevo Cliente
+    </a>
+</div>
+
+<table class="table table-striped table-bordered align-middle text-center">
+    <thead class="table-primary">
+        <tr>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Email</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Nombre</td>
+                <td>@item.Telefono</td>
+                <td>@item.Email</td>
+                <td>
+                    <a asp-action="Detalles" asp-route-id="@item.ClienteID" class="btn btn-info btn-sm">
+                        <i class="bi bi-eye"></i> Ver
+                    </a>
+                    <a asp-action="Editar" asp-route-id="@item.ClienteID" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil-square"></i> Editar
+                    </a>
+                    <a asp-action="Eliminar" asp-route-id="@item.ClienteID" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
