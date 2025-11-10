@@ -1,0 +1,72 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+/* 🎨 Estilos personalizados de AppLavaluc */
+
+/* Navbar */
+.sombra-navbar {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Contenedor principal */
+.cuerpo-principal {
+    min-height: 70vh;
+}
+
+/* Caja blanca del contenido */
+.sombra-contenedor {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    background-color: #ffffff;
+}
+
+/* Footer */
+.sombra-footer {
+    box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Botones personalizados */
+.btn-personalizado {
+    border-radius: 12px;
+    transition: 0.3s ease-in-out;
+}
+
+    .btn-personalizado:hover {
+        transform: scale(1.05);
+    }
+
+/* Para pantallas pequeñas */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    .cuerpo-principal {
+        padding: 10px;
+    }
+}
+.table td, .table th {
+    vertical-align: middle;
+}
+
+.modal-content {
+    border-radius: 15px;
+}
