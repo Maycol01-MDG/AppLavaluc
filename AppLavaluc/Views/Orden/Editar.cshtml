@@ -4,17 +4,213 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2 class="text-center mt-4 mb-3">Editar Orden</h2>
+<div class="container-fluid mt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-pencil me-2"></i> Editar Orden #@Model.OrdenID</h4>
+            <a asp-action="Index" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
 
-<form asp-action="Editar" method="post">
-    <input type="hidden" asp-for="OrdenID" />
-    <partial name="~/Views/Orden/_FormPartial.cshtml" />
-    <div class="text-center mt-3">
-        <button type="submit" class="btn btn-warning px-4">
-            <i class="bi bi-pencil"></i> Actualizar
-        </button>
-        <a asp-action="Index" class="btn btn-secondary px-4">
-            <i class="bi bi-arrow-left"></i> Volver
-        </a>
+        <div class="card-body">
+            <form id="formOrden" asp-action="Editar" method="post">
+                <input type="hidden" asp-for="OrdenID" />
+
+                <!-- VALIDACIÓN GENERAL -->
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <!-- SECCIÓN 1: DATOS DEL CLIENTE (SOLO LECTURA) -->
+                <div class="card mb-4 border-light">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i> Datos del Cliente</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Nombre</label>
+                                <input type="text" class="form-control" value="@Model.Cliente?.Nombre" readonly />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Apellidos</label>
+                                <input type="text" class="form-control" value="@Model.Cliente?.Apellidos" readonly />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Teléfono del Cliente</label>
+                                <input type="text" class="form-control" value="@(Model.Cliente?.Telefono ?? "N/A")" readonly />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Email del Cliente</label>
+                                <input type="text" class="form-control" value="@(Model.Cliente?.Email ?? "N/A")" readonly />
+                            </div>
+
+                            <div class="col-md-12 mb-0">
+                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Los datos del cliente no se pueden modificar</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: DATOS DE LA ORDEN (EDITABLES) -->
+                <div class="card mb-4 border-light">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-file-earmark me-2"></i> Información de la Orden</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Fecha de Recepción</label>
+                                <input type="date" class="form-control" value="@Model.FechaRecepcion.ToString("yyyy-MM-dd")" readonly />
+                                <small class="text-muted">No editable</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="FechaEntregaEstimada" class="form-label fw-bold"></label>
+                                <input asp-for="FechaEntregaEstimada" type="date" class="form-control" />
+                                <span asp-validation-for="FechaEntregaEstimada" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Estado" class="form-label fw-bold"></label>
+                                <select asp-for="Estado" class="form-select">
+                                    <option value="Recibido">Recibido</option>
+                                    <option value="En Proceso">En Proceso</option>
+                                    <option value="Listo">Listo</option>
+                                    <option value="Entregado">Entregado</option>
+                                </select>
+                                <span asp-validation-for="Estado" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="TipoEntrega" class="form-label fw-bold"></label>
+                                <select asp-for="TipoEntrega" class="form-select">
+                                    <option value="">-- Seleccione --</option>
+                                    <option value="Recojo">Recojo en tienda</option>
+                                    <option value="Delivery">Delivery</option>
+                                </select>
+                                <span asp-validation-for="TipoEntrega" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Telefono" class="form-label fw-bold"></label>
+                                <input asp-for="Telefono" type="tel" class="form-control" placeholder="Ej: 999888777" />
+                                <span asp-validation-for="Telefono" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Monto Total</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">S/.</span>
+                                    <input type="number" class="form-control" value="@Model.MontoTotal.ToString("F2")" readonly />
+                                </div>
+                                <small class="text-muted">Calculado automáticamente</small>
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label asp-for="Observaciones" class="form-label fw-bold"></label>
+                                <textarea asp-for="Observaciones" class="form-control" rows="2" placeholder="Notas adicionales sobre la orden..."></textarea>
+                                <span asp-validation-for="Observaciones" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: SERVICIOS AGREGADOS (SOLO LECTURA) -->
+                <div class="card mb-4 border-light">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-receipt me-2"></i> Servicios en la Orden</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center" id="tablaDetalles">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Servicio</th>
+                                        <th>Cantidad</th>
+                                        <th>Precio Unit.</th>
+                                        <th>Descuento</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.Detalles != null && Model.Detalles.Count > 0)
+                                    {
+                                        @foreach (var detalle in Model.Detalles)
+                                        {
+                                            <tr>
+                                                <td class="text-start"><strong>@detalle.Servicio?.NombreServicio</strong></td>
+                                                <td>@detalle.Cantidad</td>
+                                                <td>S/. @detalle.PrecioUnitario.ToString("F2")</td>
+                                                <td>S/. @detalle.Descuento.ToString("F2")</td>
+                                                <td class="fw-bold">S/. @detalle.Total.ToString("F2")</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">Sin servicios</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Nota:</strong> Para agregar o modificar servicios, debe crear una nueva orden.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 4: RESUMEN Y BOTONES -->
+                <div class="row mb-4">
+                    <div class="col-md-6"></div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title">Total General</h5>
+                                <h2 class="text-warning">
+                                    S/. @Model.MontoTotal.ToString("F2")
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTONES DE ACCIÓN -->
+                <div class="d-flex justify-content-between gap-2">
+                    <a asp-action="Index" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-arrow-left"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="bi bi-check-circle"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-</form>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Validar antes de enviar
+        $("#formOrden").submit(function (e) {
+            const estado = $("select[name='Estado']").val();
+
+            if (!estado) {
+                e.preventDefault();
+                alert("❌ Debe seleccionar un estado");
+                return false;
+            }
+
+            return true;
+        });
+    </script>
+}

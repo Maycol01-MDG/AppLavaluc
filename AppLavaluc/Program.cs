@@ -1,4 +1,4 @@
-using AppLavaluc.Data;
+ using AppLavaluc.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

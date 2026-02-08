@@ -1,0 +1,168 @@
+﻿@model AppLavaluc.Models.Orden
+@{
+    ViewData["Title"] = "Detalles de Orden";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-receipt me-2"></i> Orden #@Model.OrdenID</h4>
+            <a asp-action="Index" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+
+        <div class="card-body">
+            <!-- SECCIÓN 1: DATOS PRINCIPALES -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold"><i class="bi bi-person me-2"></i>Cliente</h6>
+                            <p class="mb-1"><strong>Nombre:</strong> @Model.Cliente?.NombreCompleto</p>
+                            <p class="mb-1"><strong>Teléfono:</strong> @(Model.Cliente?.Telefono ?? "N/A")</p>
+                            <p class="mb-0"><strong>Email:</strong> @(Model.Cliente?.Email ?? "N/A")</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold"><i class="bi bi-calendar me-2"></i>Fechas</h6>
+                            <p class="mb-1"><strong>Recepción:</strong> @Model.FechaRecepcion.ToShortDateString()</p>
+                            <p class="mb-1"><strong>Entrega Estimada:</strong> @(Model.FechaEntregaEstimada?.ToShortDateString() ?? "Sin definir")</p>
+                            <p class="mb-0"><strong>Tipo Entrega:</strong> <span class="badge bg-info">@Model.TipoEntrega</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: ESTADO Y OBSERVACIONES -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold"><i class="bi bi-info-circle me-2"></i>Estado</h6>
+                            <p class="mb-0">
+                                <span class="badge bg-success fs-6">@Model.Estado</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold"><i class="bi bi-telephone me-2"></i>Teléfono de Contacto</h6>
+                            <p class="mb-0">@(Model.Telefono ?? "N/A")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Observaciones))
+            {
+                <div class="alert alert-info mb-4">
+                    <h6 class="alert-heading"><i class="bi bi-chat-left-text me-2"></i>Observaciones</h6>
+                    <p class="mb-0">@Model.Observaciones</p>
+                </div>
+            }
+
+            <!-- SECCIÓN 3: DETALLES DE SERVICIOS -->
+            <div class="card mb-4 border-0">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Servicios Incluidos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-primary text-center">
+                                <tr>
+                                    <th class="text-start">Servicio</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio Unit.</th>
+                                    <th>Descuento</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Detalles != null && Model.Detalles.Count > 0)
+                                {
+                                    @foreach (var detalle in Model.Detalles)
+                                    {
+                                        <tr>
+                                            <td class="text-start">
+                                                <strong>@detalle.Servicio?.NombreServicio</strong>
+                                                <br />
+                                                <small class="text-muted">@(detalle.Servicio?.Descripcion ?? "")</small>
+                                            </td>
+                                            <td class="text-center">@detalle.Cantidad @detalle.Servicio?.UnidadMedida</td>
+                                            <td class="text-center">S/. @detalle.PrecioUnitario.ToString("F2")</td>
+                                            <td class="text-center">S/. @detalle.Descuento.ToString("F2")</td>
+                                            <td class="text-center fw-bold">S/. @detalle.Total.ToString("F2")</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">No hay servicios registrados</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 4: RESUMEN FINANCIERO -->
+            <div class="row mb-4">
+                <div class="col-md-4 offset-md-8">
+                    <div class="card border-primary bg-light">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal:</span>
+                                <span>S/. @(Model.Detalles?.Sum(d => d.PrecioUnitario * d.Cantidad).ToString("F2") ?? "0.00")</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                                <span>Descuentos:</span>
+                                <span>S/. @(Model.Detalles?.Sum(d => d.Descuento).ToString("F2") ?? "0.00")</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <h5>Total:</h5>
+                                <h5 class="text-primary fw-bold">S/. @Model.MontoTotal.ToString("F2")</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 5: BOTONES DE ACCIÓN -->
+            <div class="d-flex justify-content-between gap-2">
+                <a asp-action="Index" class="btn btn-secondary btn-lg">
+                    <i class="bi bi-arrow-left"></i> Volver a Lista
+                </a>
+                <div>
+                    <a asp-action="ImprimirTicket" asp-route-id="@Model.OrdenID" target="_blank" class="btn btn-info btn-lg">
+                        <i class="bi bi-printer"></i> Imprimir Ticket
+                    </a>
+                    <a asp-action="Editar" asp-route-id="@Model.OrdenID" class="btn btn-warning btn-lg">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <a asp-action="Eliminar" asp-route-id="@Model.OrdenID" class="btn btn-danger btn-lg">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-primary thead th {
+        background-color: #0d6efd !important;
+        color: white !important;
+    }
+</style>

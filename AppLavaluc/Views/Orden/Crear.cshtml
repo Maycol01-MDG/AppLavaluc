@@ -43,18 +43,23 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Tipo de Entrega <span class="text-danger">*</span></label>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="TipoEntrega" id="tipoRecojo" value="Recojo" required />
+                                    <input class="form-check-input" type="radio" name="tipoEntrega" id="tipoRecojo" value="Recojo en tienda" required />
                                     <label class="form-check-label" for="tipoRecojo">Recojo en tienda</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="TipoEntrega" id="tipoDelivery" value="Delivery" />
+                                    <input class="form-check-input" type="radio" name="tipoEntrega" id="tipoDelivery" value="Delivery" />
                                     <label class="form-check-label" for="tipoDelivery">Delivery</label>
                                 </div>
                             </div>
 
                             <div class="col-md-12 mb-3">
                                 <label class="form-label fw-bold">Fecha de Entrega Estimada</label>
-                                <input type="date" asp-for="FechaEntregaEstimada" class="form-control" />
+                                <input type="date" name="fechaEntregaEstimada" class="form-control" />
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Observaciones</label>
+                                <textarea name="observaciones" class="form-control" rows="2" placeholder="Notas especiales sobre la orden..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -167,27 +172,24 @@
 </div>
 
 <!-- MODAL PARA AGREGAR CANTIDAD Y DESCUENTO -->
-<div class="modal fade" id="modalDetalle" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+<div class="modal fade" id="modalDetalle" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content shadow-lg">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="modalLabel">
-                    <i class="bi bi-plus-circle me-2"></i> Agregar Servicio
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i> Agregar Servicio</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="servicioId" />
-                <input type="hidden" id="nombreServicio" />
                 <input type="hidden" id="precioUnitario" />
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Servicio Seleccionado</label>
+                    <label class="form-label fw-bold">Servicio</label>
                     <input type="text" id="nombreServicioVisible" class="form-control" readonly />
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Precio Unitario (S/.)</label>
+                    <label class="form-label fw-bold">Precio (S/.)</label>
                     <input type="text" id="precioUnitarioVisible" class="form-control" readonly />
                 </div>
 
@@ -198,23 +200,19 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Descuento (S/.) <span class="text-muted">(opcional)</span></label>
-                    <input type="number" id="descuento" class="form-control" min="0" max="9999.99" step="0.01" value="0" />
+                    <input type="number" id="descuento" class="form-control" min="0" step="0.01" value="0" />
                 </div>
 
                 <div class="card bg-light">
                     <div class="card-body">
                         <h6 class="card-title">Total</h6>
-                        <h4 class="text-success">
-                            S/. <span id="totalModalServicio">0.00</span>
-                        </h4>
+                        <h4 class="text-success">S/. <span id="totalModalServicio">0.00</span></h4>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success" id="btnAgregarDetalle">
-                    <i class="bi bi-check"></i> Agregar
-                </button>
+                <button type="button" class="btn btn-success" id="btnAgregarDetalle">Agregar</button>
             </div>
         </div>
     </div>
@@ -226,167 +224,109 @@
 
     <script>
         let detalles = [];
-        let serviciosPorCategoria = {};
 
-        // ✅ CARGAR SERVICIOS POR CATEGORÍA AL CAMBIAR SELECT
+        // Cargar servicios al cambiar categoría
         $("#selectCategoria").change(function () {
             const categoriaId = $(this).val();
-
             if (!categoriaId) {
-                $("#tbodyServicios").html('<tr><td colspan="5" class="text-center text-muted">Seleccione una categoría para ver servicios</td></tr>');
+                $("#tbodyServicios").html('<tr><td colspan="5" class="text-center text-muted">Seleccione una categoría</td></tr>');
                 return;
             }
 
-            // Obtener servicios del servidor
-            $.ajax({
-                url: '@Url.Action("ObtenerServiciosPorCategoria", "Orden")',
-                type: 'GET',
-                data: { categoriaId: categoriaId },
-                dataType: 'json',
-                success: function (data) {
-                    serviciosPorCategoria = data;
-                    mostrarServicios(data);
-                },
-                error: function () {
-                    alert("Error al cargar servicios");
+            $.get("@Url.Action("ObtenerServiciosPorCategoria", "Orden")", { categoriaId: categoriaId }, function (response) {
+                if (response.success) {
+                    mostrarServicios(response.data);
                 }
             });
         });
 
-        // ✅ MOSTRAR SERVICIOS EN LA TABLA
+        // Mostrar servicios en tabla
         function mostrarServicios(servicios) {
             if (servicios.length === 0) {
-                $("#tbodyServicios").html('<tr><td colspan="5" class="text-center text-muted">No hay servicios en esta categoría</td></tr>');
+                $("#tbodyServicios").html('<tr><td colspan="5" class="text-center text-muted">Sin servicios</td></tr>');
                 return;
             }
 
-            let html = "";
-            servicios.forEach(s => {
-                html += `
-                    <tr class="servicio-row" data-nombre="${s.nombreServicio.toLowerCase()}">
-                        <td><strong>${s.nombreServicio}</strong></td>
-                        <td>${s.descripcion || '-'}</td>
-                        <td class="text-center fw-bold">S/. ${s.precio.toFixed(2)}</td>
-                        <td class="text-center">${s.unidadMedida}</td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-success btn-sm agregar-servicio"
-                                    data-id="${s.servicioID}"
-                                    data-nombre="${s.nombreServicio}"
-                                    data-precio="${s.precio}">
-                                <i class="bi bi-plus-circle"></i> Agregar
-                            </button>
-                        </td>
-                    </tr>`;
-            });
+            let html = servicios.map(s => `
+                <tr class="servicio-row" data-nombre="${s.nombreServicio.toLowerCase()}">
+                    <td><strong>${s.nombreServicio}</strong></td>
+                    <td>${s.descripcion || '-'}</td>
+                    <td class="text-center fw-bold">S/. ${s.precio.toFixed(2)}</td>
+                    <td class="text-center">${s.unidadMedida}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-success btn-sm agregar-servicio"
+                                data-id="${s.servicioID}"
+                                data-nombre="${s.nombreServicio}"
+                                data-precio="${s.precio}">
+                            <i class="bi bi-plus-circle"></i> Agregar
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
 
             $("#tbodyServicios").html(html);
         }
 
-        // ✅ BUSCAR SERVICIO EN LA TABLA
+        // Buscar servicios
         $("#buscarServicio").on("keyup", function () {
             const texto = $(this).val().toLowerCase();
-
-            $(".servicio-row").each(function () {
-                const nombreServicio = $(this).data("nombre");
-                if (nombreServicio.includes(texto)) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
+            $(".servicio-row").toggle($(this).data("nombre").includes(texto));
         });
 
-        // ✅ CALCULAR TOTAL EN EL MODAL
-        function calcularTotalModal() {
+        // Calcular total en modal
+        function calcularTotal() {
             const precio = parseFloat($("#precioUnitario").val()) || 0;
             const cantidad = parseInt($("#cantidad").val()) || 0;
             const descuento = parseFloat($("#descuento").val()) || 0;
-
-            const subtotal = precio * cantidad;
-            const total = Math.max(0, subtotal - descuento);
-
+            const total = Math.max(0, (precio * cantidad) - descuento);
             $("#totalModalServicio").text(total.toFixed(2));
         }
 
-        // ✅ ACTUALIZAR TOTAL AL CAMBIAR CANTIDAD O DESCUENTO
-        $(document).on("change", "#cantidad, #descuento", function () {
-            calcularTotalModal();
-        });
+        $(document).on("input change", "#cantidad, #descuento", calcularTotal);
 
-        $(document).on("input", "#cantidad, #descuento", function () {
-            calcularTotalModal();
-        });
-
-        // ✅ ABRIR MODAL AL HACER CLIC EN AGREGAR
+        // Abrir modal
         $(document).on("click", ".agregar-servicio", function (e) {
             e.preventDefault();
-
-            const servicioId = $(this).data("id");
-            const nombre = $(this).data("nombre");
-            const precio = parseFloat($(this).data("precio"));
-
-            $("#servicioId").val(servicioId);
-            $("#nombreServicio").val(nombre);
-            $("#precioUnitario").val(precio);
-            $("#nombreServicioVisible").val(nombre);
-            $("#precioUnitarioVisible").val(precio.toFixed(2));
+            $("#servicioId").val($(this).data("id"));
+            $("#nombreServicioVisible").val($(this).data("nombre"));
+            $("#precioUnitario").val($(this).data("precio"));
+            $("#precioUnitarioVisible").val($(this).data("precio").toFixed(2));
             $("#cantidad").val(1);
             $("#descuento").val(0);
-
-            calcularTotalModal();
-
-            const modal = new bootstrap.Modal(document.getElementById("modalDetalle"));
-            modal.show();
+            calcularTotal();
+            new bootstrap.Modal(document.getElementById("modalDetalle")).show();
         });
 
-        // ✅ AGREGAR DETALLE A LA TABLA
+        // Agregar detalle
         $("#btnAgregarDetalle").click(function () {
             const id = $("#servicioId").val();
-            const nombre = $("#nombreServicio").val();
+            const nombre = $("#nombreServicioVisible").val();
             const precio = parseFloat($("#precioUnitario").val());
             const cantidad = parseInt($("#cantidad").val());
             const descuento = parseFloat($("#descuento").val()) || 0;
 
-            // Validaciones
             if (!id || cantidad <= 0) {
-                alert("❌ La cantidad debe ser mayor a 0.");
+                alert("❌ Cantidad inválida");
                 return;
             }
 
-            // Calcular total
-            const subtotal = precio * cantidad;
-            const total = subtotal - descuento;
-
-            // Verificar si el servicio ya existe
-            const existe = detalles.find(d => d.id == id);
-            if (existe) {
-                alert("⚠️ Este servicio ya fue agregado.");
+            if (detalles.some(d => d.id == id)) {
+                alert("⚠️ Servicio ya agregado");
                 return;
             }
 
-            // Agregar detalle
-            const detalle = {
-                id: id,
-                nombre: nombre,
-                cantidad: cantidad,
-                precio: precio,
-                descuento: descuento,
-                total: total
-            };
-
-            detalles.push(detalle);
+            const total = (precio * cantidad) - descuento;
+            detalles.push({ id, nombre, cantidad, precio, descuento, total });
             actualizarTabla();
-
-            // Cerrar modal
             bootstrap.Modal.getInstance(document.getElementById("modalDetalle")).hide();
         });
 
-        // ✅ ACTUALIZAR TABLA DE DETALLES
+        // Actualizar tabla
         function actualizarTabla() {
+            let html = '';
             let totalGeneral = 0;
-            let html = "";
 
-            detalles.forEach((d, index) => {
+            detalles.forEach((d, idx) => {
                 totalGeneral += d.total;
                 html += `
                     <tr>
@@ -395,80 +335,33 @@
                         <td>S/. ${d.precio.toFixed(2)}</td>
                         <td>S/. ${d.descuento.toFixed(2)}</td>
                         <td class="fw-bold">S/. ${d.total.toFixed(2)}</td>
-                        <td>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="eliminarDetalle(${index})">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>`;
+                        <td><button type="button" class="btn btn-danger btn-sm" onclick="eliminarDetalle(${idx})"><i class="bi bi-trash"></i></button></td>
+                    </tr>
+                `;
             });
 
-            if (html === "") {
-                html = '<tr><td colspan="6" class="text-center text-muted">No hay servicios agregados</td></tr>';
-            }
+            if (html === '') html = '<tr><td colspan="6" class="text-center text-muted">Sin servicios</td></tr>';
 
             $("#tablaDetalles tbody").html(html);
             $("#totalGeneral").text(totalGeneral.toFixed(2));
         }
 
-        // ✅ ELIMINAR DETALLE
-        function eliminarDetalle(index) {
-            detalles.splice(index, 1);
+        function eliminarDetalle(idx) {
+            detalles.splice(idx, 1);
             actualizarTabla();
         }
 
-        // ✅ VALIDAR ANTES DE ENVIAR FORMULARIO
-        $("#formOrden").on("submit", function (e) {
-            const nombre = $("#nombreCliente").val().trim();
-            const apellidos = $("#apellidosCliente").val().trim();
-            const tipoEntrega = $("input[name='TipoEntrega']:checked").val();
-
-            if (!nombre) {
-                e.preventDefault();
-                alert("❌ Ingrese el nombre del cliente.");
-                $("#nombreCliente").focus();
-                return false;
-            }
-
-            if (!apellidos) {
-                e.preventDefault();
-                alert("❌ Ingrese los apellidos del cliente.");
-                $("#apellidosCliente").focus();
-                return false;
-            }
-
-            if (!tipoEntrega) {
-                e.preventDefault();
-                alert("❌ Seleccione un tipo de entrega.");
-                return false;
-            }
-
+        // Validar y enviar
+        $("#formOrden").submit(function (e) {
             if (detalles.length === 0) {
                 e.preventDefault();
-                alert("❌ Debe agregar al menos un servicio a la orden.");
-                return false;
+                alert("❌ Agregue al menos un servicio");
+                return;
             }
 
-            // Llenar campos hidden
-            let ids = detalles.map(d => d.id).join(",");
-            let cantidades = detalles.map(d => d.cantidad).join(",");
-            let descuentosArray = detalles.map(d => d.descuento).join(",");
-
-            $("#hiddenServicioIds").val(ids);
-            $("#hiddenCantidades").val(cantidades);
-            $("#hiddenDescuentos").val(descuentosArray);
-
-            return true;
-        });
-
-        // ✅ LIMPIAR MODAL AL CERRAR
-        $("#modalDetalle").on("hide.bs.modal", function () {
-            $("#servicioId").val("");
-            $("#nombreServicio").val("");
-            $("#precioUnitario").val("");
-            $("#cantidad").val(1);
-            $("#descuento").val(0);
-            $("#totalModalServicio").text("0.00");
+            $("#hiddenServicioIds").val(detalles.map(d => d.id).join(","));
+            $("#hiddenCantidades").val(detalles.map(d => d.cantidad).join(","));
+            $("#hiddenDescuentos").val(detalles.map(d => d.descuento).join(","));
         });
     </script>
 }

@@ -8,8 +8,13 @@
 
                 <div class="mb-3">
                     <label asp-for="Nombre" class="form-label fw-bold"></label>
-                    <input asp-for="Nombre" class="form-control" placeholder="Ejemplo: Juan Pérez" />
+                    <input asp-for="Nombre" class="form-control" placeholder="Ejemplo: Juan " />
                     <span asp-validation-for="Nombre" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Apellidos" class="form-label fw-bold"></label>
+                    <input asp-for="Apellidos" class="form-control" placeholder="Ejemplo: Pérez Diaz" />
+                    <span asp-validation-for="Apellidos" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">

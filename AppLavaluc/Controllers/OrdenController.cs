@@ -22,196 +22,263 @@ namespace AppLavaluc.Controllers
                 .Include(o => o.Cliente)
                 .Include(o => o.Detalles)
                 .ThenInclude(d => d.Servicio)
+                .OrderByDescending(o => o.OrdenID)
                 .ToList();
 
             return View(ordenes);
         }
 
-        // ✅ MÉTODO CREAR GET - CORREGIDO
+        // ✅ CREAR ORDEN - GET
         public IActionResult Crear()
         {
-            ViewBag.Categorias = new SelectList(_db.Categorias, "CategoriaID", "NombreCategoria");
-            ViewBag.Clientes = new SelectList(_db.Clientes, "ClienteID", "NombreCompleto");
-
-            // 🔹 AGREGAR Descripcion al Select
-            ViewBag.Servicios = _db.Servicios
-                .Select(s => new
-                {
-                    s.ServicioID,
-                    s.NombreServicio,
-                    s.Precio,
-                    s.Descripcion  // ✅ AGREGADO
-                })
-                .ToList();
+            // Cargar categorías para el dropdown
+            var categorias = _db.Categorias.OrderBy(c => c.NombreCategoria).ToList();
+            ViewBag.Categorias = new SelectList(categorias, "CategoriaID", "NombreCategoria");
 
             return View();
         }
 
-
-        // ✅ AJAX: Obtener servicios por categoría
+        // ✅ OBTENER SERVICIOS POR CATEGORÍA - AJAX
         [HttpGet]
         public JsonResult ObtenerServiciosPorCategoria(int categoriaId)
         {
-            var servicios = _db.Servicios
-                .Where(s => s.CategoriaID == categoriaId)
-                .Select(s => new
-                {
-                    s.ServicioID,
-                    s.NombreServicio,
-                    s.Precio
-                })
-                .ToList();
+            try
+            {
+                var servicios = _db.Servicios
+                    .Where(s => s.CategoriaID == categoriaId)
+                    .Select(s => new
+                    {
+                        s.ServicioID,
+                        s.NombreServicio,
+                        s.Descripcion,
+                        s.Precio,
+                        s.UnidadMedida
+                    })
+                    .OrderBy(s => s.NombreServicio)
+                    .ToList();
 
-            return Json(servicios);
+                if (servicios.Count == 0)
+                    return Json(new { success = true, data = servicios, message = "Sin servicios en esta categoría" });
+
+                return Json(new { success = true, data = servicios });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
         }
 
+        // ✅ CREAR ORDEN - POST
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Crear(Orden orden, string nombreCliente, string? apellidosCliente,
-            string? telefonoCliente, List<int>? servicioIds, List<int>? cantidades, List<decimal>? descuentos)
+        public IActionResult Crear(
+            string nombreCliente,
+            string apellidosCliente,
+            string? telefonoCliente,
+            string tipoEntrega,
+            DateTime? fechaEntregaEstimada,
+            string? observaciones,
+            [FromForm] string servicioIds,
+            [FromForm] string cantidades,
+            [FromForm] string descuentos)
         {
-            // ✅ Validar inputs
-            if (string.IsNullOrWhiteSpace(nombreCliente))
+            try
             {
-                ModelState.AddModelError("nombreCliente", "Debe ingresar el nombre del cliente.");
-            }
-
-            if (servicioIds == null || servicioIds.Count == 0)
-            {
-                ModelState.AddModelError("servicios", "Debe agregar al menos un servicio a la orden.");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                // 🔹 Recargar ViewBag si falla
-                ViewBag.Categorias = new SelectList(_db.Categorias, "CategoriaID", "NombreCategoria");
-                ViewBag.Clientes = new SelectList(_db.Clientes, "ClienteID", "NombreCompleto");
-                ViewBag.Servicios = _db.Servicios
-                    .Select(s => new { s.ServicioID, s.NombreServicio, s.Precio, s.Descripcion })
-                    .ToList();
-                return View(orden);
-            }
-
-            // ✅ Buscar o crear cliente
-            var clienteExistente = _db.Clientes.FirstOrDefault(c =>
-                c.Nombre == nombreCliente &&
-                (string.IsNullOrEmpty(apellidosCliente) ? string.IsNullOrEmpty(c.Apellidos) : c.Apellidos == apellidosCliente)
-            );
-
-            if (clienteExistente == null)
-            {
-                clienteExistente = new Cliente
+                // ============================================
+                // 1️⃣ VALIDAR DATOS DEL CLIENTE
+                // ============================================
+                if (string.IsNullOrWhiteSpace(nombreCliente))
                 {
-                    Nombre = nombreCliente,
-                    Apellidos = apellidosCliente,
-                    Telefono = telefonoCliente
+                    TempData["Error"] = "El nombre del cliente es obligatorio.";
+                    return RedirectToAction(nameof(Crear));
+                }
+
+                if (string.IsNullOrWhiteSpace(apellidosCliente))
+                {
+                    TempData["Error"] = "Los apellidos del cliente son obligatorios.";
+                    return RedirectToAction(nameof(Crear));
+                }
+
+                if (string.IsNullOrWhiteSpace(tipoEntrega))
+                {
+                    TempData["Error"] = "Debe seleccionar un tipo de entrega.";
+                    return RedirectToAction(nameof(Crear));
+                }
+
+                // ============================================
+                // 2️⃣ VALIDAR Y PARSEAR DATOS DE SERVICIOS
+                // ============================================
+                var servicioIdList = this.ParsearListaIntegers(servicioIds);
+                var cantidadList = this.ParsearListaIntegers(cantidades);
+                var descuentoList = this.ParsearListaDecimales(descuentos);
+
+                if (servicioIdList.Count == 0)
+                {
+                    TempData["Error"] = "Debe agregar al menos un servicio a la orden.";
+                    return RedirectToAction(nameof(Crear));
+                }
+
+                // ============================================
+                // 3️⃣ BUSCAR O CREAR CLIENTE
+                // ============================================
+                var cliente = this.ObtenerOCrearCliente(
+                    nombreCliente.Trim(),
+                    apellidosCliente.Trim(),
+                    telefonoCliente?.Trim());
+
+                // ============================================
+                // 4️⃣ CREAR ORDEN
+                // ============================================
+                var orden = new Orden
+                {
+                    ClienteID = cliente.ClienteID,
+                    FechaRecepcion = DateTime.Now,
+                    FechaEntregaEstimada = fechaEntregaEstimada,
+                    Estado = "Recibido",
+                    TipoEntrega = tipoEntrega,
+                    Telefono = telefonoCliente?.Trim(),
+                    Observaciones = observaciones?.Trim(),
+                    MontoTotal = 0
                 };
-                _db.Clientes.Add(clienteExistente);
+
+                _db.Ordenes.Add(orden);
                 _db.SaveChanges();
+
+                // ============================================
+                // 5️⃣ AGREGAR DETALLES Y CALCULAR TOTAL
+                // ============================================
+                decimal totalGeneral = this.AgregarDetallesOrden(orden, servicioIdList, cantidadList, descuentoList);
+
+                // ============================================
+                // 6️⃣ ACTUALIZAR TOTAL DE LA ORDEN
+                // ============================================
+                orden.MontoTotal = totalGeneral;
+                _db.SaveChanges();
+
+                TempData["Mensaje"] = $"✅ Orden #{orden.OrdenID} creada correctamente.";
+                TempData["Tipo"] = "success";
+                return RedirectToAction(nameof(Index));
             }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al crear la orden: {ex.Message}";
+                return RedirectToAction(nameof(Crear));
+            }
+        }
 
-            // ✅ Crear orden
-            orden.ClienteID = clienteExistente.ClienteID;
-            orden.FechaRecepcion = DateTime.Now;
-            orden.Estado = "Recibido";
-            orden.MontoTotal = 0;
+        // ============================================
+        // 🔹 MÉTODO: Obtener o Crear Cliente
+        // ============================================
+        private Cliente ObtenerOCrearCliente(string nombre, string apellidos, string? telefono)
+        {
+            var clienteExistente = _db.Clientes.FirstOrDefault(c =>
+                c.Nombre == nombre && c.Apellidos == apellidos);
 
-            _db.Ordenes.Add(orden);
+            if (clienteExistente != null)
+                return clienteExistente;
+
+            var nuevoCliente = new Cliente
+            {
+                Nombre = nombre,
+                Apellidos = apellidos,
+                Telefono = telefono
+            };
+
+            _db.Clientes.Add(nuevoCliente);
             _db.SaveChanges();
 
-            // ✅ Agregar detalles
+            return nuevoCliente;
+        }
+
+        // ============================================
+        // 🔹 MÉTODO: Agregar Detalles a la Orden
+        // ============================================
+        private decimal AgregarDetallesOrden(
+            Orden orden,
+            List<int> servicioIds,
+            List<int> cantidades,
+            List<decimal> descuentos)
+        {
             decimal totalGeneral = 0;
+
             for (int i = 0; i < servicioIds.Count; i++)
             {
                 var servicio = _db.Servicios.Find(servicioIds[i]);
-                if (servicio != null)
+
+                if (servicio == null)
+                    continue;
+
+                int cantidad = (i < cantidades.Count && cantidades[i] > 0) ? cantidades[i] : 0;
+                decimal descuento = (i < descuentos.Count && descuentos[i] > 0) ? descuentos[i] : 0;
+
+                if (cantidad <= 0)
+                    continue;
+
+                // Calcular total del detalle
+                decimal total = this.CalcularTotalDetalle(servicio.Precio, cantidad, descuento);
+
+                var detalle = new DetalleOrden
                 {
-                    var cantidad = cantidades?[i] ?? 0;
-                    var descuento = descuentos?[i] ?? 0;
+                    OrdenID = orden.OrdenID,
+                    ServicioID = servicio.ServicioID,
+                    Cantidad = cantidad,
+                    PrecioUnitario = servicio.Precio,
+                    Descuento = descuento
+                };
 
-                    if (cantidad <= 0) continue;
-
-                    var total = Math.Max(0, (servicio.Precio * cantidad) - descuento);
-
-                    var detalle = new DetalleOrden
-                    {
-                        OrdenID = orden.OrdenID,
-                        ServicioID = servicio.ServicioID,
-                        Cantidad = cantidad,
-                        Descuento = descuento,
-                        PrecioUnitario = servicio.Precio
-                    };
-
-                    _db.DetallesOrden.Add(detalle);
-                    totalGeneral += total;
-                }
+                _db.DetallesOrden.Add(detalle);
+                totalGeneral += total;
             }
 
-            orden.MontoTotal = totalGeneral;
-            _db.SaveChanges();
-
-            TempData["Mensaje"] = "✅ Orden creada correctamente.";
-            return RedirectToAction(nameof(Index));
-        }
-
-
-        // ✅ AGREGAR MÉTODOS FALTANTES
-        public IActionResult Editar(int? id)
-        {
-            if (id == null || id == 0) return NotFound();
-
-            var orden = _db.Ordenes.Find(id);
-            if (orden == null) return NotFound();
-
-            ViewBag.Clientes = new SelectList(_db.Clientes, "ClienteID", "NombreCompleto", orden.ClienteID);
-            return View(orden);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult Editar(Orden orden)
-        {
-            if (ModelState.IsValid)
-            {
-                _db.Ordenes.Update(orden);
+            if (_db.ChangeTracker.HasChanges())
                 _db.SaveChanges();
-                return RedirectToAction(nameof(Index));
-            }
 
-            ViewBag.Clientes = new SelectList(_db.Clientes, "ClienteID", "NombreCompleto", orden.ClienteID);
-            return View(orden);
+            return totalGeneral;
         }
 
-        public IActionResult Eliminar(int? id)
+        // ============================================
+        // 🔹 MÉTODO: Calcular Total de Detalle
+        // ============================================
+        private decimal CalcularTotalDetalle(decimal precio, int cantidad, decimal descuento)
         {
-            if (id == null || id == 0) return NotFound();
-
-            var orden = _db.Ordenes
-                .Include(o => o.Cliente)
-                .FirstOrDefault(o => o.OrdenID == id);
-
-            if (orden == null) return NotFound();
-
-            return View(orden);
+            decimal subtotal = precio * cantidad;
+            decimal total = subtotal - descuento;
+            return Math.Max(0, total);
         }
 
-        [HttpPost, ActionName("Eliminar")]
-        [ValidateAntiForgeryToken]
-        public IActionResult EliminarConfirmado(int id)
+        // ============================================
+        // 🔹 MÉTODO: Parsear Lista de Integers
+        // ============================================
+        private List<int> ParsearListaIntegers(string? valor)
         {
-            var orden = _db.Ordenes.Find(id);
-            if (orden == null) return NotFound();
+            if (string.IsNullOrWhiteSpace(valor))
+                return new List<int>();
 
-            _db.Ordenes.Remove(orden);
-            _db.SaveChanges();
-
-            TempData["Mensaje"] = "✅ Orden eliminada correctamente.";
-            return RedirectToAction(nameof(Index));
+            return valor.Split(",", System.StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => int.TryParse(x.Trim(), out int result) ? result : 0)
+                .Where(x => x > 0)
+                .ToList();
         }
 
-        // ✅ DETALLES / IMPRIMIR TICKET
-        public IActionResult ImprimirTicket(int id)
+        // ============================================
+        // 🔹 MÉTODO: Parsear Lista de Decimales
+        // ============================================
+        private List<decimal> ParsearListaDecimales(string? valor)
         {
+            if (string.IsNullOrWhiteSpace(valor))
+                return new List<decimal>();
+
+            return valor.Split(",", System.StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => decimal.TryParse(x.Trim(), out decimal result) ? result : 0)
+                .ToList();
+        }
+
+        // ✅ VER DETALLES DE ORDEN
+        public IActionResult Detalles(int? id)
+        {
+            if (id == null || id == 0)
+                return NotFound();
+
             var orden = _db.Ordenes
                 .Include(o => o.Cliente)
                 .Include(o => o.Detalles)
@@ -224,9 +291,110 @@ namespace AppLavaluc.Controllers
             return View(orden);
         }
 
-        // ✅ DETALLES DE UNA ORDEN
-        public IActionResult Detalles(int id)
+        // ✅ EDITAR ORDEN - GET
+        public IActionResult Editar(int? id)
         {
+            if (id == null || id == 0)
+                return NotFound();
+
+            var orden = _db.Ordenes
+                .Include(o => o.Cliente)
+                .Include(o => o.Detalles)
+                .FirstOrDefault(o => o.OrdenID == id);
+
+            if (orden == null)
+                return NotFound();
+
+            ViewBag.Estados = new SelectList(new[] { "Recibido", "En Proceso", "Listo", "Entregado" }, orden.Estado);
+            return View(orden);
+        }
+
+        // ✅ EDITAR ORDEN - POST
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Editar(int id, Orden ordenActualizada)
+        {
+            if (id != ordenActualizada.OrdenID)
+                return NotFound();
+
+            try
+            {
+                var orden = _db.Ordenes.Find(id);
+                if (orden == null)
+                    return NotFound();
+
+                // Actualizar solo los campos permitidos
+                orden.Estado = ordenActualizada.Estado;
+                orden.FechaEntregaEstimada = ordenActualizada.FechaEntregaEstimada;
+                orden.Observaciones = ordenActualizada.Observaciones;
+                orden.Telefono = ordenActualizada.Telefono;
+
+                _db.Ordenes.Update(orden);
+                _db.SaveChanges();
+
+                TempData["Mensaje"] = $"✅ Orden #{id} actualizada correctamente.";
+                TempData["Tipo"] = "success";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al actualizar: {ex.Message}";
+                return RedirectToAction(nameof(Editar), new { id });
+            }
+        }
+
+        // ✅ ELIMINAR ORDEN - GET
+        public IActionResult Eliminar(int? id)
+        {
+            if (id == null || id == 0)
+                return NotFound();
+
+            var orden = _db.Ordenes
+                .Include(o => o.Cliente)
+                .Include(o => o.Detalles)
+                .FirstOrDefault(o => o.OrdenID == id);
+
+            if (orden == null)
+                return NotFound();
+
+            return View(orden);
+        }
+
+        // ✅ ELIMINAR ORDEN - POST
+        [HttpPost, ActionName("Eliminar")]
+        [ValidateAntiForgeryToken]
+        public IActionResult EliminarConfirmado(int id)
+        {
+            try
+            {
+                var orden = _db.Ordenes
+                    .Include(o => o.Detalles)
+                    .FirstOrDefault(o => o.OrdenID == id);
+
+                if (orden == null)
+                    return NotFound();
+
+                _db.DetallesOrden.RemoveRange(orden.Detalles ?? new List<DetalleOrden>());
+                _db.Ordenes.Remove(orden);
+                _db.SaveChanges();
+
+                TempData["Mensaje"] = $"✅ Orden #{id} eliminada correctamente.";
+                TempData["Tipo"] = "success";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al eliminar: {ex.Message}";
+                return RedirectToAction(nameof(Eliminar), new { id });
+            }
+        }
+
+        // ✅ IMPRIMIR TICKET
+        public IActionResult ImprimirTicket(int? id)
+        {
+            if (id == null || id == 0)
+                return NotFound();
+
             var orden = _db.Ordenes
                 .Include(o => o.Cliente)
                 .Include(o => o.Detalles)

@@ -7,41 +7,117 @@
 <head>
     <title>Ticket Orden N° @Model.OrdenID</title>
     <style>
-        body { font-family: Arial; font-size: 14px; }
-        .ticket { width: 320px; margin: auto; border: 1px dashed #000; padding: 10px; }
-        .center { text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { text-align: left; }
-        hr { border: 0; border-top: 1px dashed #aaa; }
+        body {
+            font-family: Arial;
+            font-size: 14px;
+        }
+
+        .ticket {
+            width: 320px;
+            margin: auto;
+            border: 1px dashed #000;
+            padding: 12px;
+            background: #fff;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .line {
+            border-bottom: 1px dashed #aaa;
+            margin: 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+        }
+
+        .info-label {
+            font-weight: bold;
+        }
+
+        .totals {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body onload="window.print()">
+
     <div class="ticket">
+
         <div class="center">
             <h3>🧺 LAVANDERÍA LAVALUC</h3>
-            <p>Ticket N° @Model.OrdenID</p>
-            <p><strong>Cliente:</strong> @Model.Cliente?.Nombre</p>
-            <p><strong>Tel:</strong> @Model.Cliente?.Telefono</p>
+            <p><strong>Ticket N°:</strong> @Model.OrdenID</p>
         </div>
-        <hr />
+
+        <div class="line"></div>
+
+        <p><span class="info-label">Cliente:</span> @Model.Cliente?.NombreCompleto</p>
+        <p><span class="info-label">Teléfono:</span> @Model.Cliente?.Telefono</p>
+        <p><span class="info-label">Tipo de Entrega:</span> @Model.TipoEntrega</p>
+        <p><span class="info-label">Fecha Recepción:</span> @Model.FechaRecepcion.ToString("dd/MM/yyyy")</p>
+        <p>
+            <span class="info-label">Entrega Estimada:</span>
+            @(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "No definida")
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Observaciones))
+        {
+            <p><span class="info-label">Obs.:</span> @Model.Observaciones</p>
+        }
+
+        <div class="line"></div>
+
         <table>
-            <thead><tr><th>Servicio</th><th>Cant</th><th>Total</th></tr></thead>
-            <tbody>
-            @foreach (var det in Model.Detalles)
-            {
+            <thead>
                 <tr>
-                    <td>@det.Servicio?.NombreServicio</td>
-                    <td>@det.Cantidad</td>
-                    <td>@det.Total.ToString("F2")</td>
+                    <th>Servicio</th>
+                    <th>Cant</th>
+                    <th>Total</th>
                 </tr>
-            }
+            </thead>
+            <tbody>
+                @foreach (var det in Model.Detalles)
+                {
+                    <tr>
+                        <td>@det.Servicio?.NombreServicio</td>
+                        <td>@det.Cantidad</td>
+                        <td>@det.Total.ToString("F2")</td>
+                    </tr>
+                }
             </tbody>
         </table>
-        <hr />
-        <p><strong>Total: S/. @Model.MontoTotal.ToString("F2")</strong></p>
-        <div class="center">
-            <small>¡Gracias por su preferencia!</small>
+
+        <div class="line"></div>
+
+        <p class="totals">TOTAL A PAGAR: S/. @Model.MontoTotal.ToString("F2")</p>
+
+        <div class="footer">
+            <p>Gracias por su preferencia</p>
+            <p>💙 Lavaluc - Servicio de Lavandería</p>
         </div>
+
     </div>
+
 </body>
 </html>
