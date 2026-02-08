@@ -1,0 +1,12 @@
+﻿@model AppLavaluc.Models.Cliente
+@{
+    ViewData["Title"] = "Editar Cliente";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="text-center mt-4 mb-3">Editar Cliente</h2>
+
+<form asp-action="Editar" method="post">
+    <input type="hidden" asp-for="ClienteID" />
+    <partial name="~/Views/Cliente/_FormPartial.cshtml" />
+</form>
