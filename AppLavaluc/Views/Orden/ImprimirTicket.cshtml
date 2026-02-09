@@ -2,98 +2,168 @@
 @{
     Layout = null;
 }
+
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8" />
     <title>Ticket Orden N° @Model.OrdenID</title>
+
     <style>
         body {
-            font-family: Arial;
-            font-size: 14px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            background: #f5f5f5;
         }
 
         .ticket {
             width: 320px;
             margin: auto;
-            border: 1px dashed #000;
-            padding: 12px;
             background: #fff;
+            border: 1px dashed #333;
+            padding: 12px;
         }
 
         .center {
             text-align: center;
         }
 
-        .line {
-            border-bottom: 1px dashed #aaa;
-            margin: 10px 0;
+        .title {
+            font-size: 18px;
+            font-weight: bold;
         }
+
+        .subtitle {
+            font-size: 12px;
+        }
+
+        .line {
+            border-bottom: 1px dashed #999;
+            margin: 8px 0;
+        }
+
+        .info p {
+            margin: 2px 0;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        .status {
+            text-align: center;
+            padding: 6px;
+            margin: 8px 0;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+            .status.pendiente {
+                background: #fff3cd;
+                border: 1px solid #ffeeba;
+            }
+
+            .status.parcial {
+                background: #e2e3ff;
+                border: 1px solid #b3b7ff;
+            }
+
+            .status.pagado {
+                background: #d4edda;
+                border: 1px solid #c3e6cb;
+            }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            text-align: left;
-            font-size: 14px;
+            margin-top: 6px;
         }
 
         th {
+            text-align: left;
+            font-size: 12px;
             border-bottom: 1px solid #000;
-            padding-bottom: 4px;
         }
 
-        .info-label {
-            font-weight: bold;
+        td {
+            font-size: 12px;
+            padding: 2px 0;
+        }
+
+        .right {
+            text-align: right;
         }
 
         .totals {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
         }
 
         .footer {
             text-align: center;
-            margin-top: 12px;
-            font-size: 12px;
+            font-size: 11px;
+            margin-top: 10px;
         }
     </style>
 </head>
+
 <body onload="window.print()">
 
     <div class="ticket">
 
+        <!-- ENCABEZADO -->
         <div class="center">
-            <h3>🧺 LAVANDERÍA LAVALUC</h3>
+            <div class="title">🧺 LAVANDERÍA LAVALUC</div>
+            <div class="subtitle">Servicio profesional de lavandería</div>
             <p><strong>Ticket N°:</strong> @Model.OrdenID</p>
         </div>
 
         <div class="line"></div>
 
-        <p><span class="info-label">Cliente:</span> @Model.Cliente?.NombreCompleto</p>
-        <p><span class="info-label">Teléfono:</span> @Model.Cliente?.Telefono</p>
-        <p><span class="info-label">Tipo de Entrega:</span> @Model.TipoEntrega</p>
-        <p><span class="info-label">Fecha Recepción:</span> @Model.FechaRecepcion.ToString("dd/MM/yyyy")</p>
-        <p>
-            <span class="info-label">Entrega Estimada:</span>
-            @(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "No definida")
-        </p>
+        <!-- DATOS DEL CLIENTE -->
+        <div class="info">
+            <p><span class="label">Cliente:</span> @Model.Cliente?.NombreCompleto</p>
+            <p><span class="label">Teléfono:</span> @Model.Cliente?.Telefono</p>
+            <p><span class="label">Tipo Entrega:</span> @Model.TipoEntrega</p>
+            <p><span class="label">Fecha Recepción:</span> @Model.FechaRecepcion.ToString("dd/MM/yyyy")</p>
+            <p>
+                <span class="label">Entrega Estimada:</span>
+                @(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "No definida")
+            </p>
+        </div>
+
+        <!-- ESTADO DE PAGO -->
+        <div class="status @(Model.EstadoPago?.ToLower())">
+            ESTADO DE PAGO: @Model.EstadoPago
+        </div>
+
+        <!-- ESTADO DE RECOJO -->
+        <div class="status @(Model.EstadoRecojo == "Recogido" ? "pagado" : "pendiente")">
+            RECOJO: @Model.EstadoRecojo
+        </div>
+
+        <!-- MONTOS -->
+        <div class="info">
+            <p><span class="label">Total:</span> S/. @Model.MontoTotal.ToString("F2")</p>
+            <p><span class="label">Pagado:</span> S/. @Model.MontoPagado.ToString("F2")</p>
+            <p><span class="label">Por Pagar:</span> S/. @Model.SaldoPendiente.ToString("F2")</p>
+        </div>
 
         @if (!string.IsNullOrWhiteSpace(Model.Observaciones))
         {
-            <p><span class="info-label">Obs.:</span> @Model.Observaciones</p>
+            <div class="line"></div>
+            <p><span class="label">Obs.:</span> @Model.Observaciones</p>
         }
 
         <div class="line"></div>
 
+        <!-- DETALLE DE SERVICIOS -->
         <table>
             <thead>
                 <tr>
                     <th>Servicio</th>
-                    <th>Cant</th>
-                    <th>Total</th>
+                    <th class="right">Cant</th>
+                    <th class="right">Total</th>
                 </tr>
             </thead>
             <tbody>
@@ -101,8 +171,8 @@
                 {
                     <tr>
                         <td>@det.Servicio?.NombreServicio</td>
-                        <td>@det.Cantidad</td>
-                        <td>@det.Total.ToString("F2")</td>
+                        <td class="right">@det.Cantidad</td>
+                        <td class="right">S/. @det.Total.ToString("F2")</td>
                     </tr>
                 }
             </tbody>
@@ -110,11 +180,16 @@
 
         <div class="line"></div>
 
-        <p class="totals">TOTAL A PAGAR: S/. @Model.MontoTotal.ToString("F2")</p>
+        <!-- TOTAL FINAL -->
+        <p class="totals center">
+            TOTAL ORDEN: S/. @Model.MontoTotal.ToString("F2")
+        </p>
 
+        <!-- PIE -->
         <div class="footer">
-            <p>Gracias por su preferencia</p>
-            <p>💙 Lavaluc - Servicio de Lavandería</p>
+            <p>⚠️ Conserve este ticket</p>
+            <p>📌 Recojo sujeto a pago completo</p>
+            <p>💙 Gracias por confiar en Lavaluc</p>
         </div>
 
     </div>

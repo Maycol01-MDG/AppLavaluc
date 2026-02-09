@@ -1,9 +1,0 @@
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\controladores\ControladorOrdenCrear.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\gestores\GestorDetalles.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\gestores\GestorServicios.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\gestores\ValidadorFormularioOrden.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\init.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\utilidades\CalculadorTotales.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\vistas\VistaDetallesTabla.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\vistas\VistaModalDetalle.js
-C:\UNC\AppWebLabaluc\AppLavaluc\AppLavaluc\wwwroot\js\orden\vistas\VistaServiciosTabla.js

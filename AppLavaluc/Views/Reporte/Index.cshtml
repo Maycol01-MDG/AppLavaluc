@@ -1,0 +1,191 @@
+﻿@model AppLavaluc.Models.Reporte
+
+@{
+    ViewData["Title"] = "Reporte Financiero";
+}
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h4 class="mb-0 text-primary"><i class="bi bi-pie-chart-fill me-2"></i> Reporte de Ingresos</h4>
+                    <small class="text-muted">Del @Model.FechaInicio.ToShortDateString() al @Model.FechaFin.ToShortDateString()</small>
+                </div>
+                <div class="col-md-8">
+                    <form asp-action="Index" method="get" class="row g-2 justify-content-end">
+                        <div class="col-auto">
+                            <div class="btn-group" role="group">
+                                <a asp-action="Index" asp-route-tipo="Hoy" class="btn btn-outline-primary @(Model.TipoFiltro == "Hoy" ? "active" : "")">Hoy</a>
+                                <a asp-action="Index" asp-route-tipo="Semana" class="btn btn-outline-primary @(Model.TipoFiltro == "Semana" ? "active" : "")">Semana</a>
+                                <a asp-action="Index" asp-route-tipo="Quincena" class="btn btn-outline-primary @(Model.TipoFiltro == "Quincena" ? "active" : "")">Quincena</a>
+                                <a asp-action="Index" asp-route-tipo="Mes" class="btn btn-outline-primary @(Model.TipoFiltro == "Mes" ? "active" : "")">Mes</a>
+                            </div>
+                        </div>
+                        <div class="col-auto d-flex gap-1">
+                            <input type="date" name="fechaInicio" class="form-control form-control-sm" value="@Model.FechaInicio.ToString("yyyy-MM-dd")" />
+                            <input type="date" name="fechaFin" class="form-control form-control-sm" value="@Model.FechaFin.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="tipo" value="Personalizado" />
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" onclick="window.print()" class="btn btn-dark btn-sm"><i class="bi bi-printer"></i> Imprimir</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3 shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0 opacity-75">Ventas Totales</h6>
+                            <h2 class="display-6 fw-bold mt-2">S/. @Model.TotalVentas.ToString("N2")</h2>
+                        </div>
+                        <i class="bi bi-receipt display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3 shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0 opacity-75">Dinero en Caja (Pagado)</h6>
+                            <h2 class="display-6 fw-bold mt-2">S/. @Model.TotalRecaudado.ToString("N2")</h2>
+                        </div>
+                        <i class="bi bi-cash-coin display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-white bg-danger mb-3 shadow h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0 opacity-75">Por Cobrar (Deudas)</h6>
+                            <h2 class="display-6 fw-bold mt-2">S/. @Model.TotalDeuda.ToString("N2")</h2>
+                        </div>
+                        <i class="bi bi-exclamation-triangle display-4 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-header bg-light">
+            <h5 class="mb-0 text-muted">Desglose de Órdenes (@Model.CantidadOrdenes registros)</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary">
+                        <tr>
+                            <th># Orden</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Estado Entrega</th>
+                            <th>Estado Pago</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">A Cuenta</th>
+                            <th class="text-end">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Detalles.Any())
+                        {
+                            @foreach (var item in Model.Detalles)
+                            {
+                                <tr>
+                                    <td class="fw-bold">@item.OrdenID</td>
+                                    <td>@item.FechaRecepcion.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold">@item.Cliente?.Nombre @item.Cliente?.Apellidos</span>
+                                            <small class="text-muted">@item.Telefono</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill @(item.Estado == "Entregado" ? "bg-secondary" : "bg-info text-dark")">
+                                            @item.Estado
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (item.EstadoPago == "Pagado")
+                                        {
+                                            <span class="badge bg-success">Pagado</span>
+                                        }
+                                        else if (item.EstadoPago == "Parcial")
+                                        {
+
+                                            <span class="badge bg-warning text-dark">Parcial</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span class="badge bg-danger">Pendiente</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">S/. @item.MontoTotal.ToString("N2")</td>
+                                    <td class="text-end text-success">S/. @item.MontoPagado.ToString("N2")</td>
+                                    <td class="text-end text-danger fw-bold">
+                                        @if (item.SaldoPendiente > 0)
+                                        {
+                                            <span>S/. @item.SaldoPendiente.ToString("N2")</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="5" class="text-end">TOTALES DEL PERIODO:</td>
+                                <td class="text-end">S/. @Model.TotalVentas.ToString("N2")</td>
+                                <td class="text-end text-success">S/. @Model.TotalRecaudado.ToString("N2")</td>
+                                <td class="text-end text-danger">S/. @Model.TotalDeuda.ToString("N2")</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    No hay movimientos registrados en este rango de fechas.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        .btn, form, .card-header small {
+            display: none !important;
+        }
+
+        .card {
+            border: none !important;
+            shadow: none !important;
+        }
+
+        body {
+            background-color: white;
+        }
+    }
+</style>

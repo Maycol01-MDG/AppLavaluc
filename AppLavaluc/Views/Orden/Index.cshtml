@@ -4,46 +4,176 @@
 }
 
 <div class="container mt-4">
-    <h2 class="text-primary mb-3">📋 Lista de Órdenes</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-primary mb-0">📋 Lista de Órdenes</h2>
+        <a asp-action="Crear" class="btn btn-success shadow-sm">
+            <i class="bi bi-plus-circle"></i> Nueva Orden
+        </a>
+    </div>
 
-    <a asp-action="Crear" class="btn btn-success mb-3">
-        <i class="bi bi-plus-circle"></i> Nueva Orden
-    </a>
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Cliente</th>
+                            <th>Recepción</th>
+                            <th>Entrega Est.</th>
+                            <th>Estado</th>
+                            <th>Pago</th>
+                            <th class="text-end">Saldo (Deuda)</th>
+                            <th class="text-center">Acciones / Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            // Lógica visual para las filas
+                            string claseEstado = item.Estado == "Entregado" ? "bg-success" : "bg-warning text-dark";
+                            string claseSaldo = item.SaldoPendiente > 0 ? "text-danger fw-bold" : "text-muted";
 
-    <table class="table table-striped table-hover shadow-sm">
-        <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>Cliente</th>
-                <th>Fecha Recepción</th>
-                <th>Entrega Estimada</th>
-                <th>Estado</th>
-                <th>Monto Total (S/.)</th>
-                <th>Tipo Entrega</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td>@item.OrdenID</td>
-                    <td>@item.Cliente?.Nombre</td>
-                    <td>@item.FechaRecepcion.ToShortDateString()</td>
-                    <td>@item.FechaEntregaEstimada?.ToShortDateString()</td>
-                    <td>@item.Estado</td>
-                    <td>@item.MontoTotal.ToString("F2")</td>
-                    <td>@item.TipoEntrega</td>
-                    <td>
-                        <a asp-action="Detalles" asp-route-id="@item.OrdenID" class="btn btn-sm btn-info">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                        <a asp-action="ImprimirTicket" asp-route-id="@item.OrdenID" target="_blank" class="btn btn-sm btn-secondary">
-                            <i class="bi bi-printer"></i> Ticket
-                        </a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                            <tr>
+                                <td class="fw-bold">@item.OrdenID</td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold">@item.Cliente?.Nombre @item.Cliente?.Apellidos</span>
+                                        <small class="text-muted">@item.Telefono</small>
+                                    </div>
+                                </td>
+                                <td>@item.FechaRecepcion.ToString("dd/MM")</td>
+                                <td>@item.FechaEntregaEstimada?.ToString("dd/MM")</td>
+
+                                <td><span class="badge @claseEstado">@item.Estado</span></td>
+
+                                <td>
+                                    @if (item.EstadoPago == "Pagado")
+                                    {
+                                        <span class="badge bg-success">Pagado</span>
+                                    }
+                                    else
+                                    {
+
+                                        <span class="badge bg-danger">Pendiente</span>
+                                    }
+                                </td>
+
+                                <td class="text-end @claseSaldo">
+                                    S/. @item.SaldoPendiente.ToString("F2")
+                                </td>
+
+                                <td class="text-center">
+                                    @if (item.Estado == "Entregado")
+                                    {
+                                        // Si ya se entregó, mostramos un check verde y deshabilitamos botones
+                                        <span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Entregado</span>
+                                        <br />
+                                        <a asp-action="ImprimirTicket" asp-route-id="@item.OrdenID" target="_blank" class="btn btn-sm btn-outline-secondary mt-1" title="Reimprimir Ticket">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        // BOTÓN DE ENTREGAR (Abre el Modal)
+                                        <button type="button"
+                                                class="btn btn-sm @(item.SaldoPendiente > 0 ? "btn-warning" : "btn-primary") w-100 mb-1"
+                                                onclick="abrirModalEntrega(@item.OrdenID, '@item.Cliente?.Nombre', @item.SaldoPendiente)">
+
+                                            @if (item.SaldoPendiente > 0)
+                                            {
+                                                <i class="bi bi-cash-coin"></i>
+                                                @:Cobrar y Entregar
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-box-seam"></i>
+                                                @:Entregar
+                                            }
+                                        </button>
+
+                                        // Botones extra
+                                        <div class="btn-group btn-group-sm">
+                                            <a asp-action="Detalles" asp-route-id="@item.OrdenID" class="btn btn-outline-info" title="Ver"><i class="bi bi-eye"></i></a>
+                                            <a asp-action="ImprimirTicket" asp-route-id="@item.OrdenID" target="_blank" class="btn btn-outline-secondary" title="Ticket"><i class="bi bi-printer"></i></a>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
+
+<div class="modal fade" id="modalEntrega" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="EntregarOrden" method="post">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-box-seam me-2"></i> Confirmar Entrega</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body text-center">
+                    <input type="hidden" name="idOrden" id="hiddenOrdenId" />
+
+                    <h4 class="mb-3" id="modalClienteNombre">Cliente</h4>
+
+                    <div id="divConDeuda" class="alert alert-warning d-none">
+                        <i class="bi bi-exclamation-triangle-fill fs-3 text-danger"></i>
+                        <p class="mt-2 mb-0">El cliente tiene una deuda pendiente de:</p>
+                        <h2 class="text-danger fw-bold mt-2">S/. <span id="modalMontoDeuda">0.00</span></h2>
+                        <hr>
+                        <p class="small text-muted mb-0">Al confirmar, se registrará el pago total y se entregará la ropa.</p>
+                    </div>
+
+                    <div id="divSinDeuda" class="alert alert-success d-none">
+                        <i class="bi bi-check-circle-fill fs-3"></i>
+                        <p class="mt-2 fw-bold">¡La orden está pagada!</p>
+                        <p class="mb-0">¿Confirmar entrega de prendas?</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-lg"></i> Confirmar Entrega
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModalEntrega(id, cliente, deuda) {
+            // 1. Asignar valores al modal
+            document.getElementById("hiddenOrdenId").value = id;
+            document.getElementById("modalClienteNombre").innerText = cliente;
+
+            // 2. Manejar la lógica de deuda
+            const divConDeuda = document.getElementById("divConDeuda");
+            const divSinDeuda = document.getElementById("divSinDeuda");
+            const spanMonto = document.getElementById("modalMontoDeuda");
+
+            if (deuda > 0) {
+                // Caso: Debe dinero
+                spanMonto.innerText = parseFloat(deuda).toFixed(2);
+                divConDeuda.classList.remove("d-none");
+                divSinDeuda.classList.add("d-none");
+            } else {
+                // Caso: No debe nada
+                divConDeuda.classList.add("d-none");
+                divSinDeuda.classList.remove("d-none");
+            }
+
+            // 3. Mostrar el modal
+            var myModal = new bootstrap.Modal(document.getElementById('modalEntrega'));
+            myModal.show();
+        }
+    </script>
+}

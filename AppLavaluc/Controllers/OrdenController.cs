@@ -76,6 +76,10 @@ namespace AppLavaluc.Controllers
             string apellidosCliente,
             string? telefonoCliente,
             string tipoEntrega,
+            decimal montoPagado,
+            decimal saldoPendiente,
+            string estadoPago,
+
             DateTime? fechaEntregaEstimada,
             string? observaciones,
             [FromForm] string servicioIds,
@@ -138,7 +142,13 @@ namespace AppLavaluc.Controllers
                     TipoEntrega = tipoEntrega,
                     Telefono = telefonoCliente?.Trim(),
                     Observaciones = observaciones?.Trim(),
-                    MontoTotal = 0
+                    MontoTotal = 0,
+
+
+                    MontoPagado = montoPagado,
+                    SaldoPendiente = saldoPendiente,
+                    EstadoPago = estadoPago,
+                    EstadoRecojo = "Pendiente",
                 };
 
                 _db.Ordenes.Add(orden);
@@ -406,5 +416,44 @@ namespace AppLavaluc.Controllers
 
             return View(orden);
         }
+
+
+        // ✅ ACCIÓN PARA ENTREGAR Y COBRAR
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EntregarOrden(int idOrden)
+        {
+            var orden = _db.Ordenes.Find(idOrden);
+
+            if (orden == null)
+            {
+                return NotFound();
+            }
+
+            // Lógica de negocio:
+            // 1. Si debía algo, ahora lo paga todo.
+            if (orden.SaldoPendiente > 0)
+            {
+                orden.MontoPagado += orden.SaldoPendiente; // Sumamos lo que faltaba
+                orden.SaldoPendiente = 0; // La deuda queda en 0
+            }
+
+            // 2. Actualizamos estados
+            orden.EstadoPago = "Pagado";
+            orden.Estado = "Entregado";
+
+            // 3. (Opcional) Actualizar estado de recojo si usas esa variable
+            orden.EstadoRecojo = "Recogido";
+
+            _db.SaveChanges();
+
+            TempData["Mensaje"] = $"✅ Orden #{idOrden} entregada y cobrada correctamente.";
+            return RedirectToAction(nameof(Index));
+        }
+
+
+
+
+
     }
 }

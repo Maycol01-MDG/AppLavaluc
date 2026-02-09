@@ -47,6 +47,14 @@ namespace AppLavaluc.Models
         [StringLength(500)]
         public string? Observaciones { get; set; }
 
+        public decimal MontoPagado { get; set; }
+        public decimal SaldoPendiente { get; set; }
+
+        public string EstadoPago { get; set; } // Pendiente | Parcial | Pagado
+        public string EstadoRecojo { get; set; } // Pendiente | Recogido
+
+
+
         public ICollection<DetalleOrden>? Detalles { get; set; }
 
         [NotMapped]

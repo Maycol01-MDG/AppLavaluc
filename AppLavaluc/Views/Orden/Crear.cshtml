@@ -52,10 +52,11 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-12 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <label class="form-label fw-bold">Fecha de Entrega Estimada</label>
-                                <input type="date" name="fechaEntregaEstimada" class="form-control" />
+                                <input type="date" name="fechaEntregaEstimada" class="form-control form-control-sm" />
                             </div>
+
 
                             <div class="col-md-12 mb-3">
                                 <label class="form-label fw-bold">Observaciones</label>
@@ -147,6 +148,31 @@
                                 <h2 class="text-primary">
                                     S/. <span id="totalGeneral">0.00</span>
                                 </h2>
+                                <div class="card mt-4 border-warning">
+                                    <div class="card-body">
+                                        <h5 class="fw-bold text-warning">
+                                            <i class="bi bi-cash-coin"></i> Pago
+                                        </h5>
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <label>Total</label>
+                                                <input class="form-control" id="totalPago" readonly />
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label>Monto a Cuenta</label>
+                                                <input type="number" id="montoPagado" class="form-control" min="0" value="0" />
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label>Saldo Pendiente</label>
+                                                <input class="form-control" id="saldoPendiente" readonly />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -156,6 +182,11 @@
                 <input type="hidden" id="hiddenServicioIds" name="servicioIds" />
                 <input type="hidden" id="hiddenCantidades" name="cantidades" />
                 <input type="hidden" id="hiddenDescuentos" name="descuentos" />
+
+                <input type="hidden" id="hiddenMontoPagado" name="montoPagado" />
+                <input type="hidden" id="hiddenSaldoPendiente" name="saldoPendiente" />
+                <input type="hidden" id="hiddenEstadoPago" name="estadoPago" />
+
 
                 <!-- BOTONES DE ACCIÓN -->
                 <div class="d-flex justify-content-between gap-2">
@@ -216,6 +247,7 @@
             </div>
         </div>
     </div>
+    
 </div>
 
 @section Scripts {
@@ -223,6 +255,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+
         let detalles = [];
 
         // Cargar servicios al cambiar categoría
@@ -283,6 +316,8 @@
         }
 
         $(document).on("input change", "#cantidad, #descuento", calcularTotal);
+
+        
 
         // Abrir modal
         $(document).on("click", ".agregar-servicio", function (e) {
@@ -362,6 +397,41 @@
             $("#hiddenServicioIds").val(detalles.map(d => d.id).join(","));
             $("#hiddenCantidades").val(detalles.map(d => d.cantidad).join(","));
             $("#hiddenDescuentos").val(detalles.map(d => d.descuento).join(","));
+
+            /////////////////////
+            const total = parseFloat($("#totalGeneral").text());
+            const pagado = parseFloat($("#montoPagado").val()) || 0;
+
+            let estadoPago = "Pendiente";
+            if (pagado > 0 && pagado < total) estadoPago = "Parcial";
+            if (pagado >= total) estadoPago = "Pagado";
+
+            $("#hiddenMontoPagado").val(pagado);
+            $("#hiddenSaldoPendiente").val(total - pagado);
+            $("#hiddenEstadoPago").val(estadoPago);
+
+
         });
+
+                $("#montoPagado").on("input", function () {
+            const total = parseFloat($("#totalGeneral").text()) || 0;
+            const pagado = parseFloat($(this).val()) || 0;
+            const saldo = Math.max(0, total - pagado);
+
+            $("#totalPago").val(total.toFixed(2));
+            $("#saldoPendiente").val(saldo.toFixed(2));
+        });
+
+
+        /////////////////////////////////////////////////////////
+                $("#montoPagado").on("input", function () {
+            const total = parseFloat($("#totalGeneral").text()) || 0;
+            const pagado = parseFloat($(this).val()) || 0;
+            const saldo = Math.max(0, total - pagado);
+
+            $("#totalPago").val(total.toFixed(2));
+            $("#saldoPendiente").val(saldo.toFixed(2));
+        });
+
     </script>
 }
