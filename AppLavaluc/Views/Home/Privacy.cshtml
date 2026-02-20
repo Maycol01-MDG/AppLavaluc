@@ -2,88 +2,127 @@
     ViewData["Title"] = "Política de Privacidad";
 }
 
-<div class="container mt-4">
-    <h1 class="text-primary mb-3">@ViewData["Title"]</h1>
+<style>
+    .privacy-container {
+        background: #fff;
+        border-radius: 15px;
+        box-shadow: 0 0 40px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
 
-    <p>
-        En <strong>Lavandería Lavaluc</strong> valoramos la privacidad y protección de los datos personales de nuestros clientes.
-        Esta Política de Privacidad describe cómo recopilamos, utilizamos, almacenamos y protegemos la información
-        proporcionada a través de nuestra plataforma web y nuestros servicios.
-    </p>
+    .privacy-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 3rem 2rem;
+        text-align: center;
+    }
 
-    <hr />
+    .section-icon {
+        color: #0d6efd;
+        background: #e7f1ff;
+        width: 35px;
+        height: 35px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-right: 10px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
 
-    <h4>1. Información que recopilamos</h4>
-    <p>Podemos recopilar los siguientes datos personales cuando registras una orden o utilizas nuestra web:</p>
-    <ul>
-        <li>Nombre y apellidos del cliente</li>
-        <li>Número de teléfono</li>
-        <li>Detalles de la orden (servicios solicitados, cantidades, precios, descuentos, tipo de entrega)</li>
-        <li>Observaciones adicionales relacionadas al servicio</li>
-        <li>Fecha de recepción y entrega estimada</li>
-    </ul>
+    .privacy-list li {
+        margin-bottom: 0.5rem;
+        position: relative;
+        padding-left: 1.5rem;
+    }
 
-    <h4>2. Uso de la información</h4>
-    <p>Los datos recopilados serán utilizados exclusivamente para los siguientes fines:</p>
-    <ul>
-        <li>Registrar, gestionar y dar seguimiento a las órdenes del cliente</li>
-        <li>Realizar comunicaciones relacionadas al servicio (confirmaciones, entrega, seguimiento)</li>
-        <li>Emitir tickets, boletas o comprobantes relacionados</li>
-        <li>Mejorar la calidad del servicio prestado</li>
-    </ul>
+        .privacy-list li::before {
+            content: "•";
+            color: #0d6efd;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+</style>
 
-    <h4>3. Protección de los datos</h4>
-    <p>
-        Implementamos medidas técnicas y administrativas razonables para garantizar que la información del cliente
-        permanezca protegida contra accesos no autorizados, pérdidas o modificaciones indebidas.
-    </p>
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="privacy-container">
 
-    <h4>4. Compartir información</h4>
-    <p>
-        No compartimos, vendemos ni transferimos la información personal de nuestros clientes a terceros, salvo que:
-    </p>
-    <ul>
-        <li>Sea requerido por ley o por una autoridad competente</li>
-        <li>Sea necesario para completar un proceso solicitado por el cliente (por ejemplo, servicios externos complementarios)</li>
-    </ul>
+                <div class="privacy-header">
+                    <i class="bi bi-shield-lock-fill fs-1 mb-2"></i>
+                    <h1 class="fw-bold">Política de Privacidad</h1>
+                    <p class="mb-0 opacity-75">Tu confianza es nuestra prioridad en Lavandería Lavaluc</p>
+                </div>
 
-    <h4>5. Conservación de los datos</h4>
-    <p>
-        Los datos serán conservados únicamente durante el tiempo necesario para cumplir con las obligaciones legales
-        o para brindar el servicio solicitado por el cliente.
-    </p>
+                <div class="p-5">
+                    <p class="lead text-muted mb-4">
+                        En <strong>Lavandería Lavaluc</strong>, nos comprometemos a proteger la información personal que compartes con nosotros. Este documento detalla cómo manejamos tus datos.
+                    </p>
 
-    <h4>6. Derechos del usuario</h4>
-    <p>El cliente puede solicitar en cualquier momento:</p>
-    <ul>
-        <li>Acceso a sus datos personales</li>
-        <li>Corrección o actualización de información incorrecta</li>
-        <li>Eliminación de sus datos cuando sea legalmente posible</li>
-        <li>Limitación del uso de sus datos personales</li>
-    </ul>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3 d-flex align-items-center">
+                                <span class="section-icon">1</span> Información que recopilamos
+                            </h5>
+                            <ul class="list-unstyled privacy-list text-secondary">
+                                <li>Nombre y apellidos del cliente.</li>
+                                <li>Número de teléfono de contacto.</li>
+                                <li>Historial de órdenes y servicios.</li>
+                                <li>Fechas de entrega y observaciones.</li>
+                            </ul>
+                        </div>
 
-    <h4>7. Uso del sitio web</h4>
-    <p>
-        Nuestro sitio puede utilizar cookies para mejorar la experiencia del usuario, analizar el tráfico
-        y recordar preferencias básicas. El usuario puede desactivar las cookies desde su navegador si así lo desea.
-    </p>
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3 d-flex align-items-center">
+                                <span class="section-icon">2</span> Uso de la información
+                            </h5>
+                            <ul class="list-unstyled privacy-list text-secondary">
+                                <li>Gestión y seguimiento de órdenes.</li>
+                                <li>Comunicación sobre el estado del servicio.</li>
+                                <li>Emisión de comprobantes de pago.</li>
+                                <li>Mejora continua de nuestros servicios.</li>
+                            </ul>
+                        </div>
 
-    <h4>8. Cambios en esta política</h4>
-    <p>
-        Esta Política de Privacidad puede ser actualizada ocasionalmente para reflejar mejoras del servicio o cambios
-        normativos. Las modificaciones serán publicadas en esta misma sección.
-    </p>
+                        <div class="col-12"><hr class="my-2 text-muted opacity-25"></div>
 
-    <h4>9. Contacto</h4>
-    <p>
-        Si tienes dudas sobre nuestra Política de Privacidad o deseas ejercer tus derechos, puedes comunicarte con nosotros al:
-    </p>
-    <ul>
-        <li><strong>Teléfono:</strong> 999-999-999</li>
-        <li><strong>Email:</strong> contacto@lavaluc.com</li>
-    </ul>
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3 d-flex align-items-center">
+                                <span class="section-icon">3</span> Protección de Datos
+                            </h5>
+                            <p class="text-secondary small">
+                                Implementamos medidas de seguridad técnicas para proteger tu información contra accesos no autorizados. No vendemos ni compartimos tus datos con terceros con fines comerciales.
+                            </p>
+                        </div>
 
-    <hr />
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3 d-flex align-items-center">
+                                <span class="section-icon">4</span> Tus Derechos
+                            </h5>
+                            <p class="text-secondary small">
+                                Tienes derecho a solicitar el acceso, corrección o eliminación de tus datos de nuestra base de datos en cualquier momento contactando a administración.
+                            </p>
+                        </div>
+                    </div>
 
-    <p class="text-muted">Última actualización: @DateTime.Now.ToString("dd/MM/yyyy")</p>
+                    <div class="mt-5 p-4 bg-light rounded-3 border-start border-4 border-primary">
+                        <h5 class="fw-bold mb-2">¿Tienes dudas?</h5>
+                        <p class="text-secondary mb-3">Si necesitas más información sobre cómo tratamos tus datos, contáctanos:</p>
+                        <div class="d-flex gap-4 flex-wrap">
+                            <a href="#" class="text-decoration-none fw-bold text-dark"><i class="bi bi-whatsapp text-success me-2"></i> 999-999-999</a>
+                            <a href="#" class="text-decoration-none fw-bold text-dark"><i class="bi bi-envelope text-primary me-2"></i> contacto@lavaluc.com</a>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <small class="text-muted fst-italic">Última actualización: @DateTime.Now.ToString("dd 'de' MMMM 'de' yyyy")</small>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

@@ -4,106 +4,160 @@
 }
 
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
-    <title>Ticket Orden N° @Model.OrdenID</title>
+    <title>Ticket #@Model.OrdenID</title>
 
     <style>
+        /* RESET Y CONFIGURACIÓN BÁSICA */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 13px;
-            background: #f5f5f5;
-        }
-
-        .ticket {
-            width: 320px;
-            margin: auto;
+            font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada tipo ticket */
             background: #fff;
-            border: 1px dashed #333;
-            padding: 12px;
+            color: #000;
         }
 
-        .center {
+        /* CONTENEDOR PRINCIPAL */
+        .ticket {
+            width: 300px; /* Ancho estándar para impresoras de 80mm con margen */
+            margin: 0 auto;
+            padding: 10px 0;
+        }
+
+        /* UTILIDADES DE TEXTO */
+        .text-center {
             text-align: center;
         }
 
-        .title {
-            font-size: 18px;
+        .text-right {
+            text-align: right;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .bold {
             font-weight: bold;
         }
 
-        .subtitle {
+        .uppercase {
+            text-transform: uppercase;
+        }
+
+        /* SEPARADORES */
+        .dashed-line {
+            border-top: 1px dashed #000;
+            margin: 10px 0;
+            width: 100%;
+        }
+
+        .solid-line {
+            border-top: 2px solid #000;
+            margin: 10px 0;
+            width: 100%;
+        }
+
+        /* ENCABEZADO */
+        .header-logo {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .header-info {
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        /* CAJA DE INFORMACIÓN DEL CLIENTE */
+        .client-box {
+            border: 1px solid #000;
+            padding: 8px;
+            border-radius: 5px;
+            margin: 10px 0;
             font-size: 12px;
         }
 
-        .line {
-            border-bottom: 1px dashed #999;
-            margin: 8px 0;
-        }
-
-        .info p {
-            margin: 2px 0;
-        }
-
-        .label {
-            font-weight: bold;
-        }
-
-        .status {
-            text-align: center;
-            padding: 6px;
-            margin: 8px 0;
-            font-weight: bold;
-            border-radius: 4px;
-        }
-
-            .status.pendiente {
-                background: #fff3cd;
-                border: 1px solid #ffeeba;
-            }
-
-            .status.parcial {
-                background: #e2e3ff;
-                border: 1px solid #b3b7ff;
-            }
-
-            .status.pagado {
-                background: #d4edda;
-                border: 1px solid #c3e6cb;
-            }
-
+        /* TABLA DE PRODUCTOS */
         table {
             width: 100%;
+            font-size: 12px;
             border-collapse: collapse;
-            margin-top: 6px;
         }
 
         th {
             text-align: left;
-            font-size: 12px;
             border-bottom: 1px solid #000;
+            padding-bottom: 5px;
         }
 
         td {
-            font-size: 12px;
-            padding: 2px 0;
+            padding: 4px 0;
         }
 
-        .right {
-            text-align: right;
-        }
-
-        .totals {
+        /* SECCIÓN DE TOTALES (IMPORTANTE) */
+        .totals-box {
+            margin-top: 10px;
             font-size: 14px;
+        }
+
+        .grand-total {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* ESTADO DE DEUDA (VISUALMENTE IMPACTANTE) */
+        .debt-alert {
+            margin-top: 15px;
+            border: 2px solid #000;
+            padding: 10px;
+            font-size: 16px;
             font-weight: bold;
         }
 
-        .footer {
-            text-align: center;
-            font-size: 11px;
-            margin-top: 10px;
+        .paid-badge {
+            margin-top: 15px;
+            border: 2px solid #000;
+            padding: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 20px; /* Redondeado para diferenciar */
         }
+
+        /* PIE DE PÁGINA */
+        .footer {
+            margin-top: 20px;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        .barcode {
+            margin-top: 10px;
+            height: 40px;
+            background: repeating-linear-gradient( to right, #000 0px, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 6px ); /* Simulación CSS de código de barras */
+            width: 80%;
+            margin-left: 10%;
+        }
+
+        /* AJUSTES PARA IMPRESIÓN */
+        @@media print {
+            body {
+                margin: 0;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+
     </style>
 </head>
 
@@ -111,85 +165,102 @@
 
     <div class="ticket">
 
-        <!-- ENCABEZADO -->
-        <div class="center">
-            <div class="title">🧺 LAVANDERÍA LAVALUC</div>
-            <div class="subtitle">Servicio profesional de lavandería</div>
-            <p><strong>Ticket N°:</strong> @Model.OrdenID</p>
+        <div class="text-center">
+            <div class="header-logo">💧 APP LAVALUC</div>
+            <div class="header-info">Av. Principal 123, Centro</div>
+            <div class="header-info">Tel: (01) 999-999-999</div>
+            <div class="header-info">RUC: 10123456789</div>
         </div>
 
-        <div class="line"></div>
+        <div class="dashed-line"></div>
 
-        <!-- DATOS DEL CLIENTE -->
-        <div class="info">
-            <p><span class="label">Cliente:</span> @Model.Cliente?.NombreCompleto</p>
-            <p><span class="label">Teléfono:</span> @Model.Cliente?.Telefono</p>
-            <p><span class="label">Tipo Entrega:</span> @Model.TipoEntrega</p>
-            <p><span class="label">Fecha Recepción:</span> @Model.FechaRecepcion.ToString("dd/MM/yyyy")</p>
-            <p>
-                <span class="label">Entrega Estimada:</span>
-                @(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "No definida")
-            </p>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold;">
+            <span>ORDEN: #@Model.OrdenID.ToString("D6")</span>
+            <span>@Model.FechaRecepcion.ToString("dd/MM/yy HH:mm")</span>
         </div>
 
-        <!-- ESTADO DE PAGO -->
-        <div class="status @(Model.EstadoPago?.ToLower())">
-            ESTADO DE PAGO: @Model.EstadoPago
+        <div class="client-box">
+            <div class="bold uppercase">@Model.Cliente?.NombreCompleto</div>
+            <div>Tel: @(Model.Cliente?.Telefono ?? "--")</div>
+            <div style="margin-top: 4px;">
+                Entrega: <span class="bold">@Model.TipoEntrega</span>
+            </div>
+            <div>
+                Fecha Est.: <span class="bold">@(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "Por confirmar")</span>
+            </div>
         </div>
 
-        <!-- ESTADO DE RECOJO -->
-        <div class="status @(Model.EstadoRecojo == "Recogido" ? "pagado" : "pendiente")">
-            RECOJO: @Model.EstadoRecojo
-        </div>
-
-        <!-- MONTOS -->
-        <div class="info">
-            <p><span class="label">Total:</span> S/. @Model.MontoTotal.ToString("F2")</p>
-            <p><span class="label">Pagado:</span> S/. @Model.MontoPagado.ToString("F2")</p>
-            <p><span class="label">Por Pagar:</span> S/. @Model.SaldoPendiente.ToString("F2")</p>
-        </div>
-
-        @if (!string.IsNullOrWhiteSpace(Model.Observaciones))
-        {
-            <div class="line"></div>
-            <p><span class="label">Obs.:</span> @Model.Observaciones</p>
-        }
-
-        <div class="line"></div>
-
-        <!-- DETALLE DE SERVICIOS -->
         <table>
             <thead>
                 <tr>
-                    <th>Servicio</th>
-                    <th class="right">Cant</th>
-                    <th class="right">Total</th>
+                    <th style="width: 50%;">DESCRIPCIÓN</th>
+                    <th class="text-center" style="width: 20%;">CANT</th>
+                    <th class="text-right" style="width: 30%;">IMPORTE</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var det in Model.Detalles)
+                @foreach (var item in Model.Detalles)
                 {
                     <tr>
-                        <td>@det.Servicio?.NombreServicio</td>
-                        <td class="right">@det.Cantidad</td>
-                        <td class="right">S/. @det.Total.ToString("F2")</td>
+                        <td>
+                            <div class="bold">@item.Servicio?.NombreServicio</div>
+                            @if (item.Descuento > 0)
+                            {
+                                <div style="font-size: 10px;">(Desc: -@item.Descuento.ToString("0.00"))</div>
+                            }
+                        </td>
+                        <td class="text-center">@item.Cantidad</td>
+                        <td class="text-right">@item.Total.ToString("0.00")</td>
                     </tr>
                 }
             </tbody>
         </table>
 
-        <div class="line"></div>
+        <div class="solid-line"></div>
 
-        <!-- TOTAL FINAL -->
-        <p class="totals center">
-            TOTAL ORDEN: S/. @Model.MontoTotal.ToString("F2")
-        </p>
+        <table class="totals-box">
+            <tr>
+                <td class="text-right">TOTAL A PAGAR:</td>
+                <td class="text-right bold">S/. @Model.MontoTotal.ToString("F2")</td>
+            </tr>
+            <tr>
+                <td class="text-right">A CUENTA (Pagado):</td>
+                <td class="text-right">S/. @Model.MontoPagado.ToString("F2")</td>
+            </tr>
+        </table>
 
-        <!-- PIE -->
+        <div class="text-center">
+            @if (Model.SaldoPendiente > 0)
+            {
+                <div class="debt-alert">
+                    <div>RESTA PAGAR:</div>
+                    <div style="font-size: 22px;">S/. @Model.SaldoPendiente.ToString("F2")</div>
+                    <div style="font-size: 10px; font-weight: normal; margin-top: 5px;">(Pago Pendiente)</div>
+                </div>
+            }
+            else
+            {
+                <div class="paid-badge">
+                    ¡CANCELADO!
+                    <div style="font-size: 10px; font-weight: normal;">No existen deudas</div>
+                </div>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Observaciones))
+        {
+            <div style="margin-top: 15px; font-size: 11px; border: 1px dotted #000; padding: 5px;">
+                <strong>NOTA:</strong> @Model.Observaciones
+            </div>
+        }
+
         <div class="footer">
-            <p>⚠️ Conserve este ticket</p>
-            <p>📌 Recojo sujeto a pago completo</p>
-            <p>💙 Gracias por confiar en Lavaluc</p>
+            <div class="barcode"></div> <p style="margin-top: 5px;">@Model.OrdenID</p>
+            <br />
+            <p>*** GRACIAS POR SU PREFERENCIA ***</p>
+            <p>Revise sus prendas antes de retirar.</p>
+            <p>No hay lugar a reclamo pasadas las 24hrs.</p>
+            <p>AppLavaluc System</p>
         </div>
 
     </div>

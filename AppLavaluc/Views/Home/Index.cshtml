@@ -2,106 +2,159 @@
     ViewData["Title"] = "Inicio - AppLavaluc";
 }
 
-<div class="container mt-4">
+<style>
+    /* Efecto de elevación suave */
+    .hover-card {
+        transition: all 0.3s ease;
+        border: none;
+    }
+    .hover-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+    }
 
-    <!-- 🔵 BANNER PRINCIPAL -->
-    <div class="text-center mb-4">
-        <img src="~/imagenes/Inicio/lavanderia.jpeg"
-             class="img-fluid rounded-4 shadow-lg"
-             style="max-height: 350px; object-fit: cover; width: 100%;"
-             alt="Lavandería AppLavaluc">
+    /* Estilo del Hero Banner */
+    .hero-banner {
+        background: linear-gradient(rgba(0, 80, 150, 0.7), rgba(0, 80, 150, 0.5)), url('/imagenes/Inicio/lavanderia.jpeg');
+        background-size: cover;
+        background-position: center;
+        border-radius: 20px;
+        padding: 4rem 2rem;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+
+    /* Iconos en círculos */
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px auto;
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="hero-banner text-center">
+        <h1 class="display-4 fw-bold">Bienvenido a AppLavaluc</h1>
+        <p class="lead mb-4">Gestión inteligente, rápida y eficiente para tu lavandería.</p>
+        <a asp-controller="Orden" asp-action="Crear" class="btn btn-light btn-lg rounded-pill fw-bold text-primary px-5 shadow">
+            <i class="bi bi-plus-lg me-2"></i> Crear Nueva Orden
+        </a>
     </div>
 
-    <!-- 🔵 TÍTULO PRINCIPAL -->
-    <div class="text-center mb-4">
-        <h1 class="fw-bold text-primary">Bienvenido a AppLavaluc</h1>
-        <p class="text-secondary fs-5">Sistema moderno para la gestión de lavanderías</p>
+    <div class="row g-4 mb-5">
+        <div class="col-md-3 col-sm-6">
+            <div class="card hover-card shadow-sm h-100 rounded-4 p-3">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-people-fill fs-3"></i>
+                    </div>
+                    <h2 class="fw-bold mb-0">@ViewBag.TotalClientes</h2>
+                    <p class="text-muted small text-uppercase fw-bold ls-1 mt-2">Clientes Registrados</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card hover-card shadow-sm h-100 rounded-4 p-3">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-receipt-cutoff fs-3"></i>
+                    </div>
+                    <h2 class="fw-bold mb-0">@ViewBag.TotalOrdenes</h2>
+                    <p class="text-muted small text-uppercase fw-bold ls-1 mt-2">Órdenes Totales</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card hover-card shadow-sm h-100 rounded-4 p-3">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-warning bg-opacity-10 text-warning">
+                        <i class="bi bi-tools fs-3"></i>
+                    </div>
+                    <h2 class="fw-bold mb-0">@ViewBag.TotalServicios</h2>
+                    <p class="text-muted small text-uppercase fw-bold ls-1 mt-2">Servicios Activos</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card hover-card shadow-sm h-100 rounded-4 p-3">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-danger bg-opacity-10 text-danger">
+                        <i class="bi bi-tags-fill fs-3"></i>
+                    </div>
+                    <h2 class="fw-bold mb-0">@ViewBag.TotalCategorias</h2>
+                    <p class="text-muted small text-uppercase fw-bold ls-1 mt-2">Categorías</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- 🔵 TARJETAS DE ESTADÍSTICAS -->
+    <div class="d-flex align-items-center mb-3">
+        <h3 class="fw-bold text-dark me-2">Accesos Rápidos</h3>
+        <div class="flex-grow-1 border-bottom"></div>
+    </div>
+
     <div class="row g-4">
-
-        <!-- Clientes -->
-        <div class="col-md-3">
-            <div class="card shadow-lg border-0 rounded-4 text-center p-3 h-100">
-                <i class="bi bi-people-fill text-primary fs-1"></i>
-                <h4 class="fw-bold mt-2">Clientes</h4>
-                <p class="fs-5">@ViewBag.TotalClientes</p>
-            </div>
+        <div class="col-md-4">
+            <a asp-controller="Cliente" asp-action="Crear" class="text-decoration-none">
+                <div class="card hover-card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="fw-bold mb-1">Nuevo Cliente</h5>
+                            <small class="opacity-75">Registrar usuario</small>
+                        </div>
+                        <i class="bi bi-person-plus fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </a>
         </div>
 
-        <!-- Órdenes -->
-        <div class="col-md-3">
-            <div class="card shadow-lg border-0 rounded-4 text-center p-3 h-100">
-                <i class="bi bi-receipt-cutoff text-success fs-1"></i>
-                <h4 class="fw-bold mt-2">Órdenes</h4>
-                <p class="fs-5">@ViewBag.TotalOrdenes</p>
-            </div>
+        <div class="col-md-4">
+            <a asp-controller="Servicio" asp-action="Crear" class="text-decoration-none">
+                <div class="card hover-card border-0 shadow-sm rounded-4 bg-dark text-white h-100">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="fw-bold mb-1">Nuevo Servicio</h5>
+                            <small class="opacity-75">Configurar precios</small>
+                        </div>
+                        <i class="bi bi-gear-wide-connected fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </a>
         </div>
-
-        <!-- Servicios -->
-        <div class="col-md-3">
-            <div class="card shadow-lg border-0 rounded-4 text-center p-3 h-100">
-                <i class="bi bi-tools text-warning fs-1"></i>
-                <h4 class="fw-bold mt-2">Servicios</h4>
-                <p class="fs-5">@ViewBag.TotalServicios</p>
-            </div>
+        
+         <div class="col-md-4">
+            <a asp-controller="Reporte" asp-action="Index" class="text-decoration-none">
+                <div class="card hover-card border-0 shadow-sm rounded-4 bg-info text-white h-100">
+                    <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="fw-bold mb-1">Ver Reportes</h5>
+                            <small class="opacity-75">Consultar ingresos</small>
+                        </div>
+                        <i class="bi bi-bar-chart-line fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </a>
         </div>
-
-        <!-- Categorías -->
-        <div class="col-md-3">
-            <div class="card shadow-lg border-0 rounded-4 text-center p-3 h-100">
-                <i class="bi bi-tags-fill text-danger fs-1"></i>
-                <h4 class="fw-bold mt-2">Categorías</h4>
-                <p class="fs-5">@ViewBag.TotalCategorias</p>
-            </div>
-        </div>
-
     </div>
 
-    <!-- 🔵 ACCESOS RÁPIDOS -->
-    <h3 class="mt-5 fw-bold text-secondary">Accesos rápidos</h3>
-
-    <div class="row g-4 mt-2">
-
-        <div class="col-md-3">
-            <a asp-controller="Orden" asp-action="Crear" class="btn btn-primary w-100 p-3 rounded-4 shadow">
-                <i class="bi bi-plus-circle fs-3"></i><br />
-                Nueva Orden
-            </a>
+    <div class="mt-5 p-4 bg-light rounded-4 border border-light">
+        <div class="d-flex align-items-start">
+            <i class="bi bi-info-circle-fill text-primary fs-3 me-3"></i>
+            <div>
+                <h5 class="fw-bold text-dark">Sobre el sistema</h5>
+                <p class="text-secondary mb-0">
+                    AppLavaluc optimiza el flujo de trabajo de tu negocio. Recuerda revisar los reportes al final del día para cuadrar caja.
+                </p>
+            </div>
         </div>
-
-        <div class="col-md-3">
-            <a asp-controller="Cliente" asp-action="Crear" class="btn btn-success w-100 p-3 rounded-4 shadow">
-                <i class="bi bi-person-plus fs-3"></i><br />
-                Nuevo Cliente
-            </a>
-        </div>
-
-        <div class="col-md-3">
-            <a asp-controller="Servicio" asp-action="Crear" class="btn btn-warning w-100 p-3 rounded-4 shadow">
-                <i class="bi bi-tools fs-3"></i><br />
-                Nuevo Servicio
-            </a>
-        </div>
-
-        <div class="col-md-3">
-            <a asp-controller="Categoria" asp-action="Index" class="btn btn-danger w-100 p-3 rounded-4 shadow">
-                <i class="bi bi-tags fs-3"></i><br />
-                Nueva Categoría
-            </a>
-        </div>
-
     </div>
-
-    <!-- 🔵 DESCRIPCIÓN FINAL -->
-    <div class="mt-5 p-4 bg-light rounded-4 shadow-sm">
-        <h4 class="fw-bold text-primary">¿Qué es AppLavaluc?</h4>
-        <p class="text-secondary fs-5">
-            AppLavaluc es un sistema diseñado para optimizar la gestión de lavanderías,
-            permitiendo registrar órdenes, gestionar clientes, controlar servicios y
-            mantener un seguimiento detallado del negocio.
-        </p>
-    </div>
-
 </div>

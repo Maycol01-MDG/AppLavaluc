@@ -8,72 +8,305 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - AppLavaluc</title>
 
-    <!-- Bootstrap -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
 
-    <!-- Iconos -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
 
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f6f9; /* Fondo gris suave para el body */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    <!-- Tu hoja de estilos personalizada -->
+        /* Navbar con degradado elegante */
+        .navbar-custom {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 0.8rem 1rem;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+            font-size: 1.5rem;
+        }
+
+        /* Enlaces del menú con efecto hover */
+        .nav-link {
+            font-weight: 500;
+            color: rgba(255,255,255,0.85) !important;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            margin: 0 5px;
+        }
+
+            .nav-link:hover, .nav-link.active {
+                color: #fff !important;
+                background-color: rgba(255,255,255,0.15);
+                transform: translateY(-2px);
+            }
+
+            .nav-link i {
+                margin-right: 5px;
+            }
+
+        /* Contenedor Principal (Efecto Tarjeta) */
+        .cuerpo-principal {
+            flex: 1; /* Empuja el footer hacia abajo */
+        }
+
+        .main-card {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.02);
+            padding: 2rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #343a40;
+            color: #adb5bd;
+            font-size: 0.9rem;
+            margin-top: auto;
+        }
+
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Botón de Salir */
+        .btn-logout {
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            border-radius: 20px;
+            padding: 0.375rem 1.2rem;
+            transition: all 0.3s;
+        }
+
+            .btn-logout:hover {
+                background-color: #dc3545;
+                border-color: #dc3545;
+                color: white;
+            }
+
+        /* --- ESTILOS DEL SIDEBAR --- */
+        .sidebar-container {
+            position: fixed;
+            top: 70px; /* Altura de tu Navbar superior */
+            left: 0;
+            bottom: 0;
+            width: 260px;
+            background: #ffffff;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            z-index: 1000;
+            padding-top: 20px;
+            overflow-y: auto;
+            transition: all 0.3s;
+        }
+        /* Enlaces del Sidebar */
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 25px;
+            color: #555;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 0 25px 25px 0;
+            margin-right: 15px;
+            transition: all 0.3s ease;
+        }
+
+            .sidebar-link:hover, .sidebar-link.active {
+                background-color: #e3f2fd; /* Color azul muy suave */
+                color: #0d6efd; /* Azul Bootstrap */
+                padding-left: 35px; /* Efecto de deslizamiento */
+            }
+
+            .sidebar-link i {
+                font-size: 1.2rem;
+                margin-right: 15px;
+                width: 25px;
+                text-align: center;
+            }
+        /* Ocultar Sidebar en celulares para que no estorbe */
+        @@media (max-width: 992px) {
+            .sidebar-container {
+                display: none;
+            }
+
+            .cuerpo-principal {
+                margin-left: auto !important;
+            }
+        }
+
+    </style>
+
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 
 <body>
-    <!-- 🔹 NAVBAR SUPERIOR -->
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark sombra-navbar">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-bold text-uppercase" asp-controller="Home" asp-action="Index">
-                    <i class="bi bi-basket-fill text-warning"></i> AppLavaluc
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+            <div class="container">
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-droplet-fill text-info"></i> AppLavaluc
                 </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
                 <div class="collapse navbar-collapse" id="menuPrincipal">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index"><i class="bi bi-house-door"></i> Inicio</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Categoria" asp-action="Index"><i class="bi bi-tags"></i> Categorías</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Servicio" asp-action="Crear"><i class="bi bi-tools"></i> Servicios</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Orden" asp-action="Crear"><i class="bi bi-receipt"></i> Órdenes</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Cliente" asp-action="Index"><i class="bi bi-people"></i> Clientes</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Reporte" asp-action="Index"><i class="bi bi-people"></i> Reportes</a></li>
-
-                        <li class="nav-item"><a class="nav-link" asp-controller="Orden" asp-action="Index"><i class="bi bi-people"></i>Entregas</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">
+                                <i class="bi bi-house-door-fill"></i> Inicio
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Categoria" asp-action="Index">
+                                <i class="bi bi-tags-fill"></i> Categorías
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Servicio" asp-action="Crear">
+                                <i class="bi bi-tools"></i> Servicios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Orden" asp-action="Crear">
+                                <i class="bi bi-plus-circle-fill"></i> Nueva Orden
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Cliente" asp-action="Index">
+                                <i class="bi bi-people-fill"></i> Clientes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Reporte" asp-action="Index">
+                                <i class="bi bi-bar-chart-fill"></i> Reportes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Orden" asp-action="Index">
+                                <i class="bi bi-check-circle-fill"></i> Entregas
+                            </a>
+                        </li>
                     </ul>
 
-                    <div class="d-flex">
-                        <a class="btn btn-outline-warning me-2" asp-controller="Home" asp-action="Privacy"><i class="bi bi-info-circle"></i> Acerca</a>
-                        <a class="btn btn-outline-light" href="#"><i class="bi bi-box-arrow-right"></i> Salir</a>
+                    <div class="d-flex align-items-center gap-2">
+                        <a class="nav-link text-white small me-2" asp-controller="Home" asp-action="Privacy">
+                            <i class="bi bi-shield-lock"></i> Privacidad
+                        </a>
+                        <a class="btn btn-logout btn-sm" href="#">
+                            <i class="bi bi-box-arrow-right"></i> Salir
+                        </a>
                     </div>
                 </div>
             </div>
         </nav>
+        <nav class="sidebar-container d-none d-lg-block">
+            <div class="px-4 mb-4">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Menú Principal</small>
+            </div>
+
+            <a class="sidebar-link" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-grid-fill"></i> Dashboard
+            </a>
+
+            <a class="sidebar-link" asp-controller="Orden" asp-action="Crear">
+                <i class="bi bi-plus-circle-fill text-success"></i> Nueva Orden
+            </a>
+
+            <div class="px-4 mt-4 mb-2">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Gestión</small>
+            </div>
+
+            <a class="sidebar-link" asp-controller="Cliente" asp-action="Index">
+                <i class="bi bi-people"></i> Clientes
+            </a>
+
+            <a class="sidebar-link" asp-controller="Orden" asp-action="Index">
+                <i class="bi bi-receipt"></i> Órdenes Activas
+            </a>
+
+            <a class="sidebar-link" asp-controller="Orden" asp-action="Index">
+                <i class="bi bi-box-seam"></i> Entregas
+            </a>
+
+            <div class="px-4 mt-4 mb-2">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Configuración</small>
+            </div>
+
+            <a class="sidebar-link" asp-controller="Servicio" asp-action="Crear">
+                <i class="bi bi-tools"></i> Servicios
+            </a>
+
+            <a class="sidebar-link" asp-controller="Categoria" asp-action="Index">
+                <i class="bi bi-tags"></i> Categorías
+            </a>
+
+            <a class="sidebar-link" asp-controller="Reporte" asp-action="Index">
+                <i class="bi bi-bar-chart-line"></i> Reportes
+            </a>
+
+            <div class="mt-5 mx-3 p-3 bg-light rounded-3 text-center border">
+                <i class="bi bi-headset text-primary fs-2"></i>
+                <h6 class="fw-bold mt-2">¿Soporte?</h6>
+                <small class="text-muted d-block mb-2">Contacta al admin</small>
+                <a href="#" class="btn btn-sm btn-outline-primary w-100">Ayuda</a>
+            </div>
+        </nav>
     </header>
 
-    <!-- 🔹 CUERPO PRINCIPAL -->
-    <main class="container mt-4 cuerpo-principal">
-        <div class="p-4 bg-white sombra-contenedor rounded-4">
+    <div style="height: 70px;"></div>
+
+    <main class="container cuerpo-principal">
+        <div class="main-card">
             @RenderBody()
         </div>
     </main>
 
-    <!-- 🔹 FOOTER -->
-    <footer class="text-center text-light py-3 mt-5 bg-dark sombra-footer">
-        <p class="mb-0">
-            <i class="bi bi-c-circle"></i> @DateTime.Now.Year - AppLavaluc |
-            Desarrollado con <i class="bi bi-heart-fill text-danger"></i> en ASP.NET Core MVC
-        </p>
+    <footer class="text-center py-4">
+        <div class="container">
+            <p class="mb-1 fw-bold text-white">AppLavaluc &copy; @DateTime.Now.Year</p>
+            <small class="text-white-50">
+                Sistema de Gestión de Lavandería | <i class="bi bi-code-slash"></i> Desarrollado en ASP.NET Core
+            </small>
+        </div>
     </footer>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Scripts de la vista -->
+    <script>
+        $(document).ready(function () {
+            // Detecta la URL actual y agrega la clase 'active' al enlace correspondiente
+            var url = window.location.pathname;
+            $('ul.navbar-nav a[href="' + url + '"]').addClass('active');
+        });
+    </script>
+
     @RenderSection("Scripts", required: false)
 </body>
 </html>

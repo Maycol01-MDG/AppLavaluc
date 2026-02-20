@@ -4,79 +4,96 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container-fluid mt-4">
-    <div class="card shadow-lg border-0">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i> Nueva Orden</h4>
-            <a asp-action="Index" class="btn btn-light btn-sm">
-                <i class="bi bi-arrow-left"></i> Volver
-            </a>
+<div class="container-fluid mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary mb-0"><i class="bi bi-basket2-fill me-2"></i> Nueva Orden</h2>
+            <p class="text-muted mb-0">Complete los datos para registrar un nuevo servicio.</p>
         </div>
+        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i> Volver al listado
+        </a>
+    </div>
 
-        <div class="card-body">
-            <form id="formOrden" asp-action="Crear" method="post">
-                <!-- VALIDACIÓN GENERAL -->
-                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <form id="formOrden" asp-action="Crear" method="post">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger shadow-sm rounded-3 border-0" role="alert"></div>
 
-                <!-- SECCIÓN 1: DATOS DEL CLIENTE -->
-                <div class="card mb-4 border-light">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i> Datos del Cliente</h5>
+        <div class="row g-4">
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h5 class="fw-bold text-dark"><i class="bi bi-person-lines-fill text-primary me-2"></i> Datos del Cliente</h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
-                                <input type="text" id="nombreCliente" name="nombreCliente" class="form-control" placeholder="Ingrese nombre del cliente" required />
-                            </div>
+                    <div class="card-body px-4 pb-4">
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">DNI/RUC</label>
+                            <input type="text" id="dniCliente" name="dniCliente" class="form-control bg-light border-0" placeholder="Ej: 25485745 / 10708464100" required />
+                        </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Apellidos <span class="text-danger">*</span></label>
-                                <input type="text" id="apellidosCliente" name="apellidosCliente" class="form-control" placeholder="Ingrese apellidos" required />
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">Nombres</label>
+                            <input type="text" id="nombreCliente" name="nombreCliente" class="form-control bg-light border-0" placeholder="Ej: Juan Perez" required />
+                        </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Teléfono</label>
-                                <input type="tel" id="telefonoCliente" name="telefonoCliente" class="form-control" placeholder="Ejemplo: 999888777" />
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">Apellidos</label>
+                            <input type="text" id="apellidosCliente" name="apellidosCliente" class="form-control bg-light border-0" placeholder="Ej: Lopez Garcia" required />
+                        </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Tipo de Entrega <span class="text-danger">*</span></label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="tipoEntrega" id="tipoRecojo" value="Recojo en tienda" required />
-                                    <label class="form-check-label" for="tipoRecojo">Recojo en tienda</label>
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bi bi-whatsapp text-success"></i></span>
+                                <input type="tel" id="telefonoCliente" name="telefonoCliente" class="form-control bg-light border-0" placeholder="999 888 777" />
+                            </div>
+                        </div>
+
+                        <hr class="my-4 text-muted opacity-25">
+
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">Tipo de Entrega</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check card-radio w-100">
+                                    <input class="form-check-input" type="radio" name="tipoEntrega" id="tipoRecojo" value="Recojo en tienda" checked required>
+                                    <label class="form-check-label w-100 p-2 border rounded text-center cursor-pointer" for="tipoRecojo">
+                                        <i class="bi bi-shop d-block fs-4 mb-1"></i> En Tienda
+                                    </label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="tipoEntrega" id="tipoDelivery" value="Delivery" />
-                                    <label class="form-check-label" for="tipoDelivery">Delivery</label>
+                                <div class="form-check card-radio w-100">
+                                    <input class="form-check-input" type="radio" name="tipoEntrega" id="tipoDelivery" value="Delivery">
+                                    <label class="form-check-label w-100 p-2 border rounded text-center cursor-pointer" for="tipoDelivery">
+                                        <i class="bi bi-truck d-block fs-4 mb-1"></i> Delivery
+                                    </label>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label fw-bold">Fecha de Entrega Estimada</label>
-                                <input type="date" name="fechaEntregaEstimada" class="form-control form-control-sm" />
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">Entrega Estimada</label>
+                            <input type="date" name="fechaEntregaEstimada" class="form-control bg-light border-0" />
+                        </div>
 
-
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label fw-bold">Observaciones</label>
-                                <textarea name="observaciones" class="form-control" rows="2" placeholder="Notas especiales sobre la orden..."></textarea>
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">Observaciones</label>
+                            <textarea name="observaciones" class="form-control bg-light border-0" rows="3" placeholder="Ej: Mancha difícil en camisa..."></textarea>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- SECCIÓN 2: SELECCIONAR CATEGORÍA Y SERVICIOS -->
-                <div class="card mb-4 border-light">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0"><i class="bi bi-list-check me-2"></i> Servicios Disponibles</h5>
+            <div class="col-lg-8">
+
+                <div class="card shadow-sm border-0 rounded-4 mb-4">
+                    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark"><i class="bi bi-cart-plus-fill text-success me-2"></i> Agregar Servicios</h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row mb-3">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Seleccionar Categoría <span class="text-danger">*</span></label>
-                                <select id="selectCategoria" class="form-select" required>
-                                    <option value="">-- Seleccione una categoría --</option>
+                    <div class="card-body px-4">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <select id="selectCategoria" class="form-select form-select-lg bg-light border-0" required>
+                                    <option value="">📂 Seleccionar Categoría</option>
                                     @if (ViewBag.Categorias != null)
                                     {
                                         @foreach (var cat in ViewBag.Categorias)
@@ -86,228 +103,235 @@
                                     }
                                 </select>
                             </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Buscar Servicio</label>
-                                <input type="text" id="buscarServicio" class="form-control" placeholder="Escribe para filtrar..." />
+                            <div class="col-md-6">
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="buscarServicio" class="form-control bg-light border-0" placeholder="Buscar servicio rápido..." />
+                                </div>
                             </div>
                         </div>
 
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-dark text-center">
+                        <div class="border rounded-3 custom-scroll" style="height: 350px; overflow-y: auto;">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light sticky-top">
                                     <tr>
-                                        <th>Servicio</th>
-                                        <th>Descripción</th>
-                                        <th>Precio (S/.)</th>
-                                        <th>Unidad</th>
-                                        <th>Acción</th>
+                                        <th class="ps-4">Servicio</th>
+                                        <th class="text-center">Precio</th>
+                                        <th class="text-center">Unidad</th>
+                                        <th class="text-end pe-4">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbodyServicios">
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted">Seleccione una categoría para ver servicios</td>
+                                        <td colspan="4" class="text-center py-5 text-muted">
+                                            <i class="bi bi-arrow-up-circle fs-1 d-block mb-2"></i>
+                                            Seleccione una categoría para empezar
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
+
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: DETALLES DE LA ORDEN -->
-                <div class="card mb-4 border-light">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0"><i class="bi bi-receipt me-2"></i> Detalles de la Orden</h5>
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-dark text-white py-3 px-4 rounded-top-4 d-flex justify-content-between">
+                        <h5 class="mb-0"><i class="bi bi-list-check me-2"></i> Resumen de Orden</h5>
+                        <span class="badge bg-warning text-dark" id="badgeCantidad">0 ítems</span>
                     </div>
-                    <div class="card-body">
+
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-bordered text-center" id="tablaDetalles">
-                                <thead class="table-primary">
+                            <table class="table table-striped mb-0 align-middle" id="tablaDetalles">
+                                <thead class="text-secondary small text-uppercase">
                                     <tr>
-                                        <th>Servicio</th>
-                                        <th>Cantidad</th>
-                                        <th>Precio Unit.</th>
-                                        <th>Descuento</th>
-                                        <th>Total</th>
-                                        <th>Acción</th>
+                                        <th class="ps-4">Descripción</th>
+                                        <th class="text-center">Cant.</th>
+                                        <th class="text-end">P. Unit</th>
+                                        <th class="text-end">Desc.</th>
+                                        <th class="text-end fw-bold">Subtotal</th>
+                                        <th class="text-center pe-4"></th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
+                                <tbody>
+                                </tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
 
-                <!-- SECCIÓN 4: RESUMEN Y BOTONES -->
-                <div class="row mb-4">
-                    <div class="col-md-6"></div>
-                    <div class="col-md-6">
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <h5 class="card-title">Total General</h5>
-                                <h2 class="text-primary">
-                                    S/. <span id="totalGeneral">0.00</span>
-                                </h2>
-                                <div class="card mt-4 border-warning">
-                                    <div class="card-body">
-                                        <h5 class="fw-bold text-warning">
-                                            <i class="bi bi-cash-coin"></i> Pago
-                                        </h5>
-
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <label>Total</label>
-                                                <input class="form-control" id="totalPago" readonly />
-                                            </div>
-
-                                            <div class="col-md-4">
-                                                <label>Monto a Cuenta</label>
-                                                <input type="number" id="montoPagado" class="form-control" min="0" value="0" />
-                                            </div>
-
-                                            <div class="col-md-4">
-                                                <label>Saldo Pendiente</label>
-                                                <input class="form-control" id="saldoPendiente" readonly />
-                                            </div>
-                                        </div>
+                        <div class="bg-light p-4 rounded-bottom-4">
+                            <div class="row align-items-end">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-muted mb-2">💰 Registro de Pago</label>
+                                    <div class="input-group input-group-lg mb-3">
+                                        <span class="input-group-text bg-white border-0 fw-bold text-success">S/. A Cuenta</span>
+                                        <input type="number" id="montoPagado" class="form-control border-0 fw-bold text-success" min="0" placeholder="0.00" />
+                                    </div>
+                                    <div class="d-flex justify-content-between text-muted small px-2">
+                                        <span>Saldo Pendiente:</span>
+                                        <span class="fw-bold text-danger fs-6">S/. <span id="saldoPendienteDisplay">0.00</span></span>
                                     </div>
                                 </div>
+                                <div class="col-md-6 text-end">
+                                    <p class="text-muted mb-0 small text-uppercase fw-bold">Total a Pagar</p>
+                                    <h1 class="display-4 fw-bold text-primary mb-3">S/. <span id="totalGeneralDisplay">0.00</span></h1>
 
+                                    <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-scale w-100">
+                                        <i class="bi bi-check-lg me-2"></i> Finalizar Orden
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- CAMPOS HIDDEN PARA ENVIAR DATOS -->
-                <input type="hidden" id="hiddenServicioIds" name="servicioIds" />
-                <input type="hidden" id="hiddenCantidades" name="cantidades" />
-                <input type="hidden" id="hiddenDescuentos" name="descuentos" />
-
-                <input type="hidden" id="hiddenMontoPagado" name="montoPagado" />
-                <input type="hidden" id="hiddenSaldoPendiente" name="saldoPendiente" />
-                <input type="hidden" id="hiddenEstadoPago" name="estadoPago" />
-
-
-                <!-- BOTONES DE ACCIÓN -->
-                <div class="d-flex justify-content-between gap-2">
-                    <a asp-action="Index" class="btn btn-secondary btn-lg">
-                        <i class="bi bi-arrow-left"></i> Cancelar
-                    </a>
-                    <button type="submit" class="btn btn-success btn-lg">
-                        <i class="bi bi-check-circle"></i> Guardar Orden
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
+
+        <input type="hidden" id="hiddenServicioIds" name="servicioIds" />
+        <input type="hidden" id="hiddenCantidades" name="cantidades" />
+        <input type="hidden" id="hiddenDescuentos" name="descuentos" />
+        <input type="hidden" id="hiddenMontoPagado" name="montoPagado" />
+        <input type="hidden" id="hiddenSaldoPendiente" name="saldoPendiente" />
+        <input type="hidden" id="hiddenEstadoPago" name="estadoPago" />
+    </form>
 </div>
 
-<!-- MODAL PARA AGREGAR CANTIDAD Y DESCUENTO -->
 <div class="modal fade" id="modalDetalle" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content shadow-lg">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i> Agregar Servicio</h5>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-lg me-2"></i> Agregar Item</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" id="servicioId" />
                 <input type="hidden" id="precioUnitario" />
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Servicio</label>
-                    <input type="text" id="nombreServicioVisible" class="form-control" readonly />
-                </div>
+                <h5 class="fw-bold text-primary mb-1" id="nombreServicioModal">Nombre del Servicio</h5>
+                <p class="text-muted small mb-4">Precio Base: S/. <span id="precioBaseModal">0.00</span></p>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Precio (S/.)</label>
-                    <input type="text" id="precioUnitarioVisible" class="form-control" readonly />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Cantidad <span class="text-danger">*</span></label>
-                    <input type="number" id="cantidad" class="form-control" min="1" max="999" value="1" required />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Descuento (S/.) <span class="text-muted">(opcional)</span></label>
-                    <input type="number" id="descuento" class="form-control" min="0" step="0.01" value="0" />
-                </div>
-
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h6 class="card-title">Total</h6>
-                        <h4 class="text-success">S/. <span id="totalModalServicio">0.00</span></h4>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Cantidad</label>
+                        <input type="number" id="cantidad" class="form-control form-control-lg bg-light border-0 text-center fw-bold" min="1" value="1" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Descuento (S/.)</label>
+                        <input type="number" id="descuento" class="form-control form-control-lg bg-light border-0 text-center text-danger" min="0" step="0.50" value="0" />
                     </div>
                 </div>
+
+                <div class="alert alert-success mt-4 mb-0 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Total Item:</span>
+                    <span class="fs-4 fw-bold">S/. <span id="totalModalServicio">0.00</span></span>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success" id="btnAgregarDetalle">Agregar</button>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" id="btnAgregarDetalle">
+                    <i class="bi bi-check-lg me-1"></i> Agregar
+                </button>
             </div>
         </div>
     </div>
-    
 </div>
+
+<style>
+    /* Estilos extra para los Radio Buttons */
+    .card-radio input:checked + label {
+        background-color: #e7f1ff;
+        border-color: #0d6efd !important;
+        color: #0d6efd;
+        font-weight: bold;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .hover-scale {
+        transition: transform 0.2s;
+    }
+
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+
+
+    /* Barra de desplazamiento personalizada y bonita */
+    .custom-scroll::-webkit-scrollbar {
+        width: 8px; /* Ancho delgado */
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1; /* Fondo de la barra */
+        border-radius: 4px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1; /* Color de la barra (gris suave) */
+        border-radius: 4px;
+    }
+
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8; /* Color al pasar el mouse */
+        }
+</style>
 
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-
         let detalles = [];
 
-        // Cargar servicios al cambiar categoría
+        // 1. CARGAR SERVICIOS
         $("#selectCategoria").change(function () {
             const categoriaId = $(this).val();
             if (!categoriaId) {
-                $("#tbodyServicios").html('<tr><td colspan="5" class="text-center text-muted">Seleccione una categoría</td></tr>');
+                $("#tbodyServicios").html('<tr><td colspan="4" class="text-center py-4 text-muted">Seleccione una categoría</td></tr>');
                 return;
             }
+            // Muestra cargando...
+            $("#tbodyServicios").html('<tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>');
 
             $.get("@Url.Action("ObtenerServiciosPorCategoria", "Orden")", { categoriaId: categoriaId }, function (response) {
-                if (response.success) {
-                    mostrarServicios(response.data);
-                }
+                if (response.success) mostrarServicios(response.data);
             });
         });
 
-        // Mostrar servicios en tabla
         function mostrarServicios(servicios) {
             if (servicios.length === 0) {
-                $("#tbodyServicios").html('<tr><td colspan="5" class="text-center text-muted">Sin servicios</td></tr>');
+                $("#tbodyServicios").html('<tr><td colspan="4" class="text-center py-4 text-muted">Sin servicios disponibles</td></tr>');
                 return;
             }
-
             let html = servicios.map(s => `
                 <tr class="servicio-row" data-nombre="${s.nombreServicio.toLowerCase()}">
-                    <td><strong>${s.nombreServicio}</strong></td>
-                    <td>${s.descripcion || '-'}</td>
-                    <td class="text-center fw-bold">S/. ${s.precio.toFixed(2)}</td>
-                    <td class="text-center">${s.unidadMedida}</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-success btn-sm agregar-servicio"
-                                data-id="${s.servicioID}"
-                                data-nombre="${s.nombreServicio}"
-                                data-precio="${s.precio}">
-                            <i class="bi bi-plus-circle"></i> Agregar
+                    <td class="ps-4">
+                        <div class="fw-bold text-dark">${s.nombreServicio}</div>
+                        <small class="text-muted">${s.descripcion || ''}</small>
+                    </td>
+                    <td class="fw-bold text-primary">S/. ${s.precio.toFixed(2)}</td>
+                    <td><span class="badge bg-light text-dark border">${s.unidadMedida}</span></td>
+                    <td class="text-end pe-4">
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle shadow-sm agregar-servicio"
+                                data-id="${s.servicioID}" data-nombre="${s.nombreServicio}" data-precio="${s.precio}">
+                            <i class="bi bi-plus-lg"></i>
                         </button>
                     </td>
                 </tr>
             `).join('');
-
             $("#tbodyServicios").html(html);
         }
 
-        // Buscar servicios
+        // 2. BUSCADOR
         $("#buscarServicio").on("keyup", function () {
             const texto = $(this).val().toLowerCase();
             $(".servicio-row").toggle($(this).data("nombre").includes(texto));
         });
 
-        // Calcular total en modal
-        function calcularTotal() {
+        // 3. MODAL Y CÁLCULOS
+        function calcularTotalModal() {
             const precio = parseFloat($("#precioUnitario").val()) || 0;
             const cantidad = parseInt($("#cantidad").val()) || 0;
             const descuento = parseFloat($("#descuento").val()) || 0;
@@ -315,38 +339,29 @@
             $("#totalModalServicio").text(total.toFixed(2));
         }
 
-        $(document).on("input change", "#cantidad, #descuento", calcularTotal);
+        $(document).on("input change", "#cantidad, #descuento", calcularTotalModal);
 
-        
-
-        // Abrir modal
         $(document).on("click", ".agregar-servicio", function (e) {
-            e.preventDefault();
             $("#servicioId").val($(this).data("id"));
-            $("#nombreServicioVisible").val($(this).data("nombre"));
+            $("#nombreServicioModal").text($(this).data("nombre"));
             $("#precioUnitario").val($(this).data("precio"));
-            $("#precioUnitarioVisible").val($(this).data("precio").toFixed(2));
+            $("#precioBaseModal").text($(this).data("precio").toFixed(2));
             $("#cantidad").val(1);
             $("#descuento").val(0);
-            calcularTotal();
+            calcularTotalModal();
             new bootstrap.Modal(document.getElementById("modalDetalle")).show();
         });
 
-        // Agregar detalle
+        // 4. AGREGAR A LA LISTA
         $("#btnAgregarDetalle").click(function () {
             const id = $("#servicioId").val();
-            const nombre = $("#nombreServicioVisible").val();
+            const nombre = $("#nombreServicioModal").text();
             const precio = parseFloat($("#precioUnitario").val());
             const cantidad = parseInt($("#cantidad").val());
             const descuento = parseFloat($("#descuento").val()) || 0;
 
-            if (!id || cantidad <= 0) {
-                alert("❌ Cantidad inválida");
-                return;
-            }
-
             if (detalles.some(d => d.id == id)) {
-                alert("⚠️ Servicio ya agregado");
+                alert("⚠️ Este servicio ya está en la lista.");
                 return;
             }
 
@@ -356,7 +371,7 @@
             bootstrap.Modal.getInstance(document.getElementById("modalDetalle")).hide();
         });
 
-        // Actualizar tabla
+        // 5. ACTUALIZAR TABLA PRINCIPAL
         function actualizarTabla() {
             let html = '';
             let totalGeneral = 0;
@@ -365,32 +380,48 @@
                 totalGeneral += d.total;
                 html += `
                     <tr>
-                        <td class="text-start"><strong>${d.nombre}</strong></td>
-                        <td>${d.cantidad}</td>
-                        <td>S/. ${d.precio.toFixed(2)}</td>
-                        <td>S/. ${d.descuento.toFixed(2)}</td>
-                        <td class="fw-bold">S/. ${d.total.toFixed(2)}</td>
-                        <td><button type="button" class="btn btn-danger btn-sm" onclick="eliminarDetalle(${idx})"><i class="bi bi-trash"></i></button></td>
+                        <td class="ps-4 fw-bold text-dark">${d.nombre}</td>
+                        <td class="text-center">${d.cantidad}</td>
+                        <td class="text-end text-muted">S/. ${d.precio.toFixed(2)}</td>
+                        <td class="text-end text-danger small">${d.descuento > 0 ? '- S/. ' + d.descuento.toFixed(2) : '-'}</td>
+                        <td class="text-end fw-bold text-dark">S/. ${d.total.toFixed(2)}</td>
+                        <td class="text-center pe-4">
+                            <button type="button" class="btn btn-link text-danger p-0" onclick="eliminarDetalle(${idx})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
                     </tr>
                 `;
             });
 
-            if (html === '') html = '<tr><td colspan="6" class="text-center text-muted">Sin servicios</td></tr>';
+            if (html === '') html = '<tr><td colspan="6" class="text-center py-4 text-muted small">No hay servicios agregados aún</td></tr>';
 
             $("#tablaDetalles tbody").html(html);
-            $("#totalGeneral").text(totalGeneral.toFixed(2));
+            $("#totalGeneralDisplay").text(totalGeneral.toFixed(2));
+            $("#badgeCantidad").text(detalles.length + " ítems");
+
+            // Recalcular saldo
+            $("#montoPagado").trigger("input");
         }
 
-        function eliminarDetalle(idx) {
+        window.eliminarDetalle = function(idx) {
             detalles.splice(idx, 1);
             actualizarTabla();
-        }
+        };
 
-        // Validar y enviar
+        // 6. CÁLCULO DE PAGO Y SALDO
+        $("#montoPagado").on("input", function () {
+            const total = parseFloat($("#totalGeneralDisplay").text()) || 0;
+            const pagado = parseFloat($(this).val()) || 0;
+            const saldo = Math.max(0, total - pagado);
+            $("#saldoPendienteDisplay").text(saldo.toFixed(2));
+        });
+
+        // 7. ENVIAR FORMULARIO
         $("#formOrden").submit(function (e) {
             if (detalles.length === 0) {
                 e.preventDefault();
-                alert("❌ Agregue al menos un servicio");
+                alert("⚠️ Debe agregar al menos un servicio para guardar la orden.");
                 return;
             }
 
@@ -398,10 +429,8 @@
             $("#hiddenCantidades").val(detalles.map(d => d.cantidad).join(","));
             $("#hiddenDescuentos").val(detalles.map(d => d.descuento).join(","));
 
-            /////////////////////
-            const total = parseFloat($("#totalGeneral").text());
+            const total = parseFloat($("#totalGeneralDisplay").text());
             const pagado = parseFloat($("#montoPagado").val()) || 0;
-
             let estadoPago = "Pendiente";
             if (pagado > 0 && pagado < total) estadoPago = "Parcial";
             if (pagado >= total) estadoPago = "Pagado";
@@ -409,29 +438,6 @@
             $("#hiddenMontoPagado").val(pagado);
             $("#hiddenSaldoPendiente").val(total - pagado);
             $("#hiddenEstadoPago").val(estadoPago);
-
-
         });
-
-                $("#montoPagado").on("input", function () {
-            const total = parseFloat($("#totalGeneral").text()) || 0;
-            const pagado = parseFloat($(this).val()) || 0;
-            const saldo = Math.max(0, total - pagado);
-
-            $("#totalPago").val(total.toFixed(2));
-            $("#saldoPendiente").val(saldo.toFixed(2));
-        });
-
-
-        /////////////////////////////////////////////////////////
-                $("#montoPagado").on("input", function () {
-            const total = parseFloat($("#totalGeneral").text()) || 0;
-            const pagado = parseFloat($(this).val()) || 0;
-            const saldo = Math.max(0, total - pagado);
-
-            $("#totalPago").val(total.toFixed(2));
-            $("#saldoPendiente").val(saldo.toFixed(2));
-        });
-
     </script>
 }

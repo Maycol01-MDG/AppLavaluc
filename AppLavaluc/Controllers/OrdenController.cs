@@ -167,7 +167,8 @@ namespace AppLavaluc.Controllers
 
                 TempData["Mensaje"] = $"✅ Orden #{orden.OrdenID} creada correctamente.";
                 TempData["Tipo"] = "success";
-                return RedirectToAction(nameof(Index));
+                // Esto te envía directo a la vista de impresión con el ID de la orden recién creada
+                return RedirectToAction("ImprimirTicket", new { id = orden.OrdenID });
             }
             catch (Exception ex)
             {
