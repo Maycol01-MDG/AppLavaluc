@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -53,7 +53,7 @@ namespace AppLavaluc.Models
         public string EstadoPago { get; set; } // Pendiente | Parcial | Pagado
         public string EstadoRecojo { get; set; } // Pendiente | Recogido
 
-
+        public ICollection<Pago>? Pagos { get; set; }
 
         public ICollection<DetalleOrden>? Detalles { get; set; }
 

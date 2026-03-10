@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using AppLavaluc.Models;
 
 namespace AppLavaluc.Data
@@ -12,6 +12,7 @@ namespace AppLavaluc.Data
         public DbSet<Servicio> Servicios { get; set; }
         public DbSet<Orden> Ordenes { get; set; }
         public DbSet<DetalleOrden> DetallesOrden { get; set; }
+        public DbSet<Pago> Pagos { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -32,6 +33,11 @@ namespace AppLavaluc.Data
                 .HasOne(d => d.Servicio)
                 .WithMany(s => s.DetallesOrden)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Pago>()
+                .HasOne(p => p.Orden)
+                .WithMany(o => o.Pagos)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

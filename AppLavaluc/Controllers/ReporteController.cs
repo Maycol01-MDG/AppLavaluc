@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AppLavaluc.Data;
 using AppLavaluc.Models;
@@ -57,26 +57,36 @@ namespace AppLavaluc.Controllers
                     break;
             }
 
-            // 2. Consultar Base de Datos
+            // 2. Consultar Base de Datos - Órdenes recibidas en este periodo
             var ordenes = await _context.Ordenes
                 .Include(o => o.Cliente)
                 .Where(o => o.FechaRecepcion >= inicio && o.FechaRecepcion <= fin)
                 .OrderByDescending(o => o.OrdenID)
-                .AsNoTracking() // Mejora rendimiento para reportes
+                .AsNoTracking()
                 .ToListAsync();
 
-            // 3. Construir el ViewModel
+            // 3. Consultar Base de Datos - Pagos realizados en este periodo (EL CORAZÓN DEL REQUERIMIENTO)
+            var pagos = await _context.Pagos
+                .Include(p => p.Orden)
+                    .ThenInclude(o => o.Cliente)
+                .Where(p => p.FechaPago >= inicio && p.FechaPago <= fin)
+                .OrderByDescending(p => p.FechaPago)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // 4. Construir el ViewModel
             var reporte = new Reporte
             {
                 FechaInicio = inicio,
                 FechaFin = fin,
                 TipoFiltro = tipo,
                 Detalles = ordenes,
+                PagosDetalle = pagos, // Agregamos el detalle de pagos
                 CantidadOrdenes = ordenes.Count,
                 // Cálculos matemáticos
-                TotalVentas = ordenes.Sum(x => x.MontoTotal),
-                TotalRecaudado = ordenes.Sum(x => x.MontoPagado),
-                TotalDeuda = ordenes.Sum(x => x.SaldoPendiente)
+                TotalVentas = ordenes.Sum(x => x.MontoTotal), // Lo que se recibió para lavar
+                TotalRecaudado = pagos.Sum(x => x.Monto),     // Lo que REALMENTE entró a caja
+                TotalDeuda = _context.Ordenes.Sum(x => x.SaldoPendiente) // Deuda total histórica (opcional: podrías filtrar por las de este periodo)
             };
 
             return View(reporte);

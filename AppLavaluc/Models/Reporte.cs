@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace AppLavaluc.Models
 {
@@ -30,5 +30,6 @@ namespace AppLavaluc.Models
 
         // Lista detallada para la tabla
         public List<Orden> Detalles { get; set; } = new List<Orden>();
+        public List<Pago> PagosDetalle { get; set; } = new List<Pago>();
     }
 }

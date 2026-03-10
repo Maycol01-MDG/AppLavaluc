@@ -1,4 +1,4 @@
-﻿using AppLavaluc.Data;
+using AppLavaluc.Data;
 using AppLavaluc.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -164,6 +164,23 @@ namespace AppLavaluc.Controllers
                 // ============================================
                 orden.MontoTotal = totalGeneral;
                 _db.SaveChanges();
+
+                // ============================================
+                // 7️⃣ REGISTRAR EL PAGO INICIAL (SI EXISTE)
+                // ============================================
+                if (montoPagado > 0)
+                {
+                    var pagoInicial = new Pago
+                    {
+                        OrdenID = orden.OrdenID,
+                        Monto = montoPagado,
+                        FechaPago = DateTime.Now,
+                        MetodoPago = "Efectivo", // Por defecto, podrías hacerlo dinámico después
+                        Notas = "Pago inicial al crear la orden"
+                    };
+                    _db.Pagos.Add(pagoInicial);
+                    _db.SaveChanges();
+                }
 
                 TempData["Mensaje"] = $"✅ Orden #{orden.OrdenID} creada correctamente.";
                 TempData["Tipo"] = "success";
@@ -435,8 +452,20 @@ namespace AppLavaluc.Controllers
             // 1. Si debía algo, ahora lo paga todo.
             if (orden.SaldoPendiente > 0)
             {
-                orden.MontoPagado += orden.SaldoPendiente; // Sumamos lo que faltaba
+                decimal montoRestante = orden.SaldoPendiente;
+                orden.MontoPagado += montoRestante; // Sumamos lo que faltaba
                 orden.SaldoPendiente = 0; // La deuda queda en 0
+
+                // REGISTRAR EL PAGO EN LA NUEVA TABLA (EL CORAZÓN DEL REQUERIMIENTO)
+                var pagoFinal = new Pago
+                {
+                    OrdenID = orden.OrdenID,
+                    Monto = montoRestante,
+                    FechaPago = DateTime.Now,
+                    MetodoPago = "Efectivo",
+                    Notas = "Pago al momento de recoger la ropa"
+                };
+                _db.Pagos.Add(pagoFinal);
             }
 
             // 2. Actualizamos estados

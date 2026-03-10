@@ -1,4 +1,4 @@
-﻿@model AppLavaluc.Models.Reporte
+@model AppLavaluc.Models.Reporte
 
 @{
     ViewData["Title"] = "Reporte Financiero";
@@ -57,7 +57,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title text-uppercase mb-0 opacity-75">Dinero en Caja (Pagado)</h6>
+                            <h6 class="card-title text-uppercase mb-0 opacity-75">Ingresos Reales (Caja)</h6>
                             <h2 class="display-6 fw-bold mt-2">S/. @Model.TotalRecaudado.ToString("N2")</h2>
                         </div>
                         <i class="bi bi-cash-coin display-4 opacity-50"></i>
@@ -81,9 +81,59 @@
         </div>
     </div>
 
-    <div class="card shadow border-0">
+    <div class="card shadow border-0 mt-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Ingresos Reales (Caja) en este periodo</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary">
+                        <tr>
+                            <th>Fecha de Pago</th>
+                            <th>Orden #</th>
+                            <th>Cliente</th>
+                            <th>Método</th>
+                            <th>Notas</th>
+                            <th class="text-end">Monto Pagado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.PagosDetalle.Any())
+                        {
+                            @foreach (var pago in Model.PagosDetalle)
+                            {
+                                <tr>
+                                    <td>@pago.FechaPago.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="fw-bold">@pago.OrdenID</td>
+                                    <td>@pago.Orden?.Cliente?.Nombre @pago.Orden?.Cliente?.Apellidos</td>
+                                    <td><span class="badge bg-info text-dark">@pago.MetodoPago</span></td>
+                                    <td><small class="text-muted">@pago.Notas</small></td>
+                                    <td class="text-end fw-bold text-success">S/. @pago.Monto.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr class="table-success fw-bold">
+                                <td colspan="5" class="text-end">TOTAL INGRESOS CAJA:</td>
+                                <td class="text-end">S/. @Model.TotalRecaudado.ToString("N2")</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    No hay pagos registrados en este periodo.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow border-0 mt-4">
         <div class="card-header bg-light">
-            <h5 class="mb-0 text-muted">Desglose de Órdenes (@Model.CantidadOrdenes registros)</h5>
+            <h5 class="mb-0 text-muted">Órdenes RECIBIDAS en este periodo (@Model.CantidadOrdenes registros)</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -151,10 +201,10 @@
                                 </tr>
                             }
                             <tr class="table-secondary fw-bold">
-                                <td colspan="5" class="text-end">TOTALES DEL PERIODO:</td>
+                                <td colspan="5" class="text-end">TOTAL ÓRDENES RECIBIDAS:</td>
                                 <td class="text-end">S/. @Model.TotalVentas.ToString("N2")</td>
-                                <td class="text-end text-success">S/. @Model.TotalRecaudado.ToString("N2")</td>
-                                <td class="text-end text-danger">S/. @Model.TotalDeuda.ToString("N2")</td>
+                                <td class="text-end text-success">S/. @Model.Detalles.Sum(x => x.MontoPagado).ToString("N2")</td>
+                                <td class="text-end text-danger">S/. @Model.Detalles.Sum(x => x.SaldoPendiente).ToString("N2")</td>
                             </tr>
                         }
                         else
