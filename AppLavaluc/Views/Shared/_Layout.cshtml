@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
 }
 <!DOCTYPE html>
@@ -215,12 +215,22 @@
                     </ul>
 
                     <div class="d-flex align-items-center gap-2">
-                        <a class="nav-link text-white small me-2" asp-controller="Home" asp-action="Privacy">
-                            <i class="bi bi-shield-lock"></i> Privacidad
-                        </a>
-                        <a class="btn btn-logout btn-sm" href="#">
-                            <i class="bi bi-box-arrow-right"></i> Salir
-                        </a>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <span class="navbar-text text-white me-2">¡Hola, @User.Identity.Name!</span>
+                            <form asp-controller="Cuenta" asp-action="Logout" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-logout btn-sm">
+                                    <i class="bi bi-box-arrow-right"></i> Salir
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-light btn-sm" asp-controller="Cuenta" asp-action="Login">
+                                <i class="bi bi-person-circle"></i> Iniciar Sesión
+                            </a>
+                        }
                     </div>
                 </div>
             </div>

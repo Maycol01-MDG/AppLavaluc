@@ -1,9 +1,11 @@
-﻿using AppLavaluc.Data;
+using AppLavaluc.Data;
 using AppLavaluc.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AppLavaluc.Controllers
 {
+    [Authorize]
     public class CategoriaController : Controller
     {
         private readonly LavanderiaContext _db;

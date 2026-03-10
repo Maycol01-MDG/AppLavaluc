@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AppLavaluc.Data;
 using AppLavaluc.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AppLavaluc.Controllers
 {
+    [Authorize]
     public class ReporteController : Controller
     {
         private readonly LavanderiaContext _context;

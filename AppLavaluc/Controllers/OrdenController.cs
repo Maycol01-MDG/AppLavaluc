@@ -3,9 +3,11 @@ using AppLavaluc.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AppLavaluc.Controllers
 {
+    [Authorize]
     public class OrdenController : Controller
     {
         private readonly LavanderiaContext _db;

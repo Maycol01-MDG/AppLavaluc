@@ -13,6 +13,7 @@ namespace AppLavaluc.Data
         public DbSet<Orden> Ordenes { get; set; }
         public DbSet<DetalleOrden> DetallesOrden { get; set; }
         public DbSet<Pago> Pagos { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

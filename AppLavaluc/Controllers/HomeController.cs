@@ -3,17 +3,17 @@ using AppLavaluc.Data;
 using AppLavaluc.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AppLavaluc.Controllers
 {
+    [Authorize] // <-- PROTEGIDO
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
         private readonly LavanderiaContext _context;
 
-        public HomeController(ILogger<HomeController> logger, LavanderiaContext context)
+        public HomeController(LavanderiaContext context)
         {
-            _logger = logger;
             _context = context;
         }
 
