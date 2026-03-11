@@ -280,6 +280,13 @@
                 <i class="bi bi-bar-chart-line"></i> Reportes
             </a>
 
+            @if (User.IsInRole("Admin"))
+            {
+                <a class="sidebar-link" asp-controller="Usuario" asp-action="Index">
+                    <i class="bi bi-people-fill"></i> Gestionar Usuarios
+                </a>
+            }
+
             <div class="mt-5 mx-3 p-3 bg-light rounded-3 text-center border">
                 <i class="bi bi-headset text-primary fs-2"></i>
                 <h6 class="fw-bold mt-2">¿Soporte?</h6>

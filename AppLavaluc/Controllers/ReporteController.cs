@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace AppLavaluc.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class ReporteController : Controller
     {
         private readonly LavanderiaContext _context;

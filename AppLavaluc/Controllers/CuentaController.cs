@@ -44,6 +44,12 @@ namespace AppLavaluc.Controllers
                 return View();
             }
 
+            if (!user.Activo)
+            {
+                TempData["Error"] = "Su cuenta está desactivada. Contacte al administrador.";
+                return View();
+            }
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.NombreUsuario),

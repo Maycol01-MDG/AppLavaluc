@@ -1,0 +1,57 @@
+@model AppLavaluc.Models.Usuario
+
+@{
+    ViewData["Title"] = "Editar Usuario";
+}
+
+<h2>Editar Usuario</h2>
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <form asp-action="Editar">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="UsuarioID" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="NombreCompleto" class="form-label"></label>
+                <input asp-for="NombreCompleto" class="form-control" />
+                <span asp-validation-for="NombreCompleto" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="NombreUsuario" class="form-label"></label>
+                <input asp-for="NombreUsuario" class="form-control" />
+                <span asp-validation-for="NombreUsuario" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label for="newPassword" class="form-label">Nueva Contraseña (opcional)</label>
+                <input type="password" name="newPassword" class="form-control" />
+                <small class="form-text text-muted">Dejar en blanco para no cambiar la contraseña.</small>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Rol" class="form-label"></label>
+                <select asp-for="Rol" class="form-select" asp-items="ViewBag.Roles"></select>
+                <span asp-validation-for="Rol" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" asp-for="Activo">
+                <label class="form-check-label" asp-for="Activo">@Html.DisplayNameFor(model => model.Activo)</label>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
