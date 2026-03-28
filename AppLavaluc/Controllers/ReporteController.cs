@@ -16,8 +16,7 @@ namespace AppLavaluc.Controllers
             _context = context;
         }
 
-        // GET: Reporte/Index
-        public async Task<IActionResult> Index(string tipo = "Hoy", DateTime? fechaInicio = null, DateTime? fechaFin = null)
+        private async Task<Reporte> ConstruirReporteAsync(string tipo, DateTime? fechaInicio, DateTime? fechaFin)
         {
             // 1. Configurar rango de fechas
             DateTime inicio = DateTime.Today;
@@ -77,7 +76,7 @@ namespace AppLavaluc.Controllers
                 .ToListAsync();
 
             // 4. Construir el ViewModel
-            var reporte = new Reporte
+            return new Reporte
             {
                 FechaInicio = inicio,
                 FechaFin = fin,
@@ -90,7 +89,13 @@ namespace AppLavaluc.Controllers
                 TotalRecaudado = pagos.Sum(x => x.Monto),     // Lo que REALMENTE entró a caja
                 TotalDeuda = _context.Ordenes.Sum(x => x.SaldoPendiente) // Deuda total histórica (opcional: podrías filtrar por las de este periodo)
             };
+        }
 
+        // GET: Reporte/Index
+        public async Task<IActionResult> Index(string tipo = "Hoy", DateTime? fechaInicio = null, DateTime? fechaFin = null, bool print = false)
+        {
+            ViewData["IsPrint"] = print;
+            var reporte = await ConstruirReporteAsync(tipo, fechaInicio, fechaFin);
             return View(reporte);
         }
 
@@ -98,11 +103,9 @@ namespace AppLavaluc.Controllers
         // Vista simplificada para impresión (sin menús ni botones)
         public async Task<IActionResult> Imprimir(string tipo, DateTime fechaInicio, DateTime fechaFin)
         {
-            // Reutilizamos la lógica, pero retornamos una vista diferente
-            return await Index(tipo, fechaInicio, fechaFin);
-            // Nota: Lo ideal sería redirigir a una vista "Imprimir.cshtml" específica,
-            // pero para simplificar, usaremos la misma lógica.
-            // Si quieres una vista dedicada, crea Imprimir.cshtml y cambia el return a View(reporte);
+            ViewData["IsPrint"] = true;
+            var reporte = await ConstruirReporteAsync(tipo, fechaInicio, fechaFin);
+            return View("Index", reporte);
         }
     }
 }

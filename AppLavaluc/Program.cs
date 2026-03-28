@@ -1,4 +1,4 @@
- using AppLavaluc.Data;
+using AppLavaluc.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
@@ -33,7 +33,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseAuthentication(); // Habilita la autenticación
@@ -44,27 +43,46 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}"
 );
 
-// Seed de datos para el usuario inicial
+/// Seed de datos para el usuario inicial
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<LavanderiaContext>();
-        if (!context.Usuarios.Any())
+
+        // 1. ESTO OBLIGA A ENTITY FRAMEWORK A CREAR LA BASE DE DATOS Y LAS TABLAS SI NO EXISTEN
+        context.Database.EnsureCreated();
+
+        var adminUser = context.Usuarios.FirstOrDefault(u => u.Email == "admin@lavaluc.com");
+
+        if (adminUser == null)
         {
             context.Usuarios.Add(new AppLavaluc.Models.Usuario
             {
                 NombreUsuario = "admin",
+                NombreCompleto = "Administrador",
                 Email = "admin@lavaluc.com",
-                PasswordHash = AppLavaluc.Services.PasswordHelper.HashPassword("123456"), // ¡Cambia esta contraseña!
-                Rol = "Admin"
+                PasswordHash = AppLavaluc.Services.PasswordHelper.HashPassword("123456"),
+                Rol = "Admin",
+                Activo = true
             });
             context.SaveChanges();
+            Console.WriteLine("¡ÉXITO! El usuario administrador fue creado en la base de datos.");
         }
     }
     catch (Exception ex)
     {
+        // 2. ESTO IMPRIMIRÁ EL ERROR REAL DE MYSQL EN TU CONSOLA NEGRA
+        Console.WriteLine("==================================================");
+        Console.WriteLine("ERROR FATAL AL CREAR EL USUARIO EN MYSQL:");
+        Console.WriteLine(ex.Message);
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine("DETALLE DEL ERROR: " + ex.InnerException.Message);
+        }
+        Console.WriteLine("==================================================");
+
         var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Ocurrió un error durante el sembrado de datos.");
     }

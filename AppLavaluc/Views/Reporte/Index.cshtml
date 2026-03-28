@@ -2,42 +2,101 @@
 
 @{
     ViewData["Title"] = "Reporte Financiero";
+    var isPrint = ViewData["IsPrint"] as bool? == true;
 }
 
-<div class="container-fluid mt-4">
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white py-3">
-            <div class="row align-items-center">
-                <div class="col-md-4">
-                    <h4 class="mb-0 text-primary"><i class="bi bi-pie-chart-fill me-2"></i> Reporte de Ingresos</h4>
-                    <small class="text-muted">Del @Model.FechaInicio.ToShortDateString() al @Model.FechaFin.ToShortDateString()</small>
-                </div>
-                <div class="col-md-8">
-                    <form asp-action="Index" method="get" class="row g-2 justify-content-end">
-                        <div class="col-auto">
-                            <div class="btn-group" role="group">
-                                <a asp-action="Index" asp-route-tipo="Hoy" class="btn btn-outline-primary @(Model.TipoFiltro == "Hoy" ? "active" : "")">Hoy</a>
-                                <a asp-action="Index" asp-route-tipo="Semana" class="btn btn-outline-primary @(Model.TipoFiltro == "Semana" ? "active" : "")">Semana</a>
-                                <a asp-action="Index" asp-route-tipo="Quincena" class="btn btn-outline-primary @(Model.TipoFiltro == "Quincena" ? "active" : "")">Quincena</a>
-                                <a asp-action="Index" asp-route-tipo="Mes" class="btn btn-outline-primary @(Model.TipoFiltro == "Mes" ? "active" : "")">Mes</a>
+<div class="container-fluid mt-4 report-page">
+    @if (!isPrint)
+    {
+        <div class="card shadow-sm mb-4 report-no-print">
+            <div class="card-header bg-white py-3">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <h4 class="mb-0 text-primary"><i class="bi bi-pie-chart-fill me-2"></i> Reporte de Ingresos</h4>
+                        <small class="text-muted">Del @Model.FechaInicio.ToShortDateString() al @Model.FechaFin.ToShortDateString()</small>
+                    </div>
+                    <div class="col-md-8">
+                        <form asp-action="Index" method="get" class="row g-2 justify-content-end">
+                            <div class="col-auto">
+                                <div class="btn-group" role="group">
+                                    <a asp-action="Index" asp-route-tipo="Hoy" class="btn btn-outline-primary @(Model.TipoFiltro == "Hoy" ? "active" : "")">Hoy</a>
+                                    <a asp-action="Index" asp-route-tipo="Semana" class="btn btn-outline-primary @(Model.TipoFiltro == "Semana" ? "active" : "")">Semana</a>
+                                    <a asp-action="Index" asp-route-tipo="Quincena" class="btn btn-outline-primary @(Model.TipoFiltro == "Quincena" ? "active" : "")">Quincena</a>
+                                    <a asp-action="Index" asp-route-tipo="Mes" class="btn btn-outline-primary @(Model.TipoFiltro == "Mes" ? "active" : "")">Mes</a>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-auto d-flex gap-1">
-                            <input type="date" name="fechaInicio" class="form-control form-control-sm" value="@Model.FechaInicio.ToString("yyyy-MM-dd")" />
-                            <input type="date" name="fechaFin" class="form-control form-control-sm" value="@Model.FechaFin.ToString("yyyy-MM-dd")" />
-                            <input type="hidden" name="tipo" value="Personalizado" />
-                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
-                        </div>
-                        <div class="col-auto">
-                            <button type="button" onclick="window.print()" class="btn btn-dark btn-sm"><i class="bi bi-printer"></i> Imprimir</button>
-                        </div>
-                    </form>
+                            <div class="col-auto d-flex gap-1">
+                                <input type="date" name="fechaInicio" class="form-control form-control-sm" value="@Model.FechaInicio.ToString("yyyy-MM-dd")" />
+                                <input type="date" name="fechaFin" class="form-control form-control-sm" value="@Model.FechaFin.ToString("yyyy-MM-dd")" />
+                                <input type="hidden" name="tipo" value="Personalizado" />
+                                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+                            </div>
+                            <div class="col-auto">
+                                <a class="btn btn-dark btn-sm" target="_blank"
+                                   asp-action="Index"
+                                   asp-route-tipo="@Model.TipoFiltro"
+                                   asp-route-fechaInicio="@Model.FechaInicio.ToString("yyyy-MM-dd")"
+                                   asp-route-fechaFin="@Model.FechaFin.ToString("yyyy-MM-dd")"
+                                   asp-route-print="true">
+                                    <i class="bi bi-printer"></i> Imprimir
+                                </a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 
-    <div class="row mb-4">
+    @if (isPrint)
+    {
+        <div class="report-preview-toolbar report-no-print">
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-dark btn-sm" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Imprimir
+                </button>
+                <a class="btn btn-outline-secondary btn-sm"
+                   asp-action="Index"
+                   asp-route-tipo="@Model.TipoFiltro"
+                   asp-route-fechaInicio="@Model.FechaInicio.ToString("yyyy-MM-dd")"
+                   asp-route-fechaFin="@Model.FechaFin.ToString("yyyy-MM-dd")">
+                    Volver
+                </a>
+            </div>
+        </div>
+
+        <div class="report-print-header">
+            <div class="report-print-header-left">
+                <img class="report-logo" src="~/imagenes/Inicio/lavanderia.jpeg" alt="Logo" />
+                <div>
+                    <div class="report-company">AppLavaluc</div>
+                    <div class="report-subtitle">Reporte Financiero</div>
+                </div>
+            </div>
+            <div class="report-print-header-right">
+                <div class="report-title">Reporte de Ingresos</div>
+                <div class="report-range">Del @Model.FechaInicio.ToString("dd/MM/yyyy") al @Model.FechaFin.ToString("dd/MM/yyyy")</div>
+                <div class="report-meta">Generado: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </div>
+
+        <div class="report-kpis">
+            <div class="report-kpi">
+                <div class="report-kpi-label">Ventas Totales</div>
+                <div class="report-kpi-value">S/. @Model.TotalVentas.ToString("N2")</div>
+            </div>
+            <div class="report-kpi">
+                <div class="report-kpi-label">Ingresos Reales (Caja)</div>
+                <div class="report-kpi-value">S/. @Model.TotalRecaudado.ToString("N2")</div>
+            </div>
+            <div class="report-kpi">
+                <div class="report-kpi-label">Por Cobrar</div>
+                <div class="report-kpi-value">S/. @Model.TotalDeuda.ToString("N2")</div>
+            </div>
+        </div>
+    }
+
+    <div class="row mb-4 report-no-print">
         <div class="col-md-4">
             <div class="card text-white bg-primary mb-3 shadow h-100">
                 <div class="card-body">
@@ -222,20 +281,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    @@media print {
-        .btn, form, .card-header small {
-            display: none !important;
-        }
-
-        .card {
-            border: none !important;
-            shadow: none !important;
-        }
-
-        body {
-            background-color: white;
-        }
-    }
-</style>

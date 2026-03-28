@@ -38,31 +38,43 @@ namespace AppLavaluc.Controllers
 
             var user = _context.Usuarios.FirstOrDefault(u => u.NombreUsuario == username || u.Email == username);
 
-            if (user == null || !PasswordHelper.VerifyPassword(password, user.PasswordHash))
+            // DIAGNÓSTICO 1: ¿El usuario realmente existe?
+            if (user == null)
             {
-                TempData["Error"] = "Credenciales inválidas.";
+                TempData["Error"] = $"DIAGNÓSTICO 1: El correo '{username}' NO existe en la base de datos de MySQL.";
                 return View();
             }
 
+            // DIAGNÓSTICO 2: ¿El Hash es correcto?
+            bool passwordCorrecta = PasswordHelper.VerifyPassword(password, user.PasswordHash);
+            if (!passwordCorrecta)
+            {
+                // Esto nos mostrará qué hay realmente guardado en tu BD
+                TempData["Error"] = $"DIAGNÓSTICO 2: Contraseña incorrecta. El hash guardado en tu BD es: '{user.PasswordHash}'";
+                return View();
+            }
+
+            // DIAGNÓSTICO 3: ¿El usuario está activo?
             if (!user.Activo)
             {
-                TempData["Error"] = "Su cuenta está desactivada. Contacte al administrador.";
+                TempData["Error"] = "DIAGNÓSTICO 3: El usuario existe y la contraseña es correcta, pero la cuenta está desactivada (Activo = false).";
                 return View();
             }
 
+            // Si pasa todas las pruebas, inicia sesión
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.NombreUsuario),
-                new Claim(ClaimTypes.NameIdentifier, user.UsuarioID.ToString()),
-                new Claim(ClaimTypes.Role, user.Rol)
-            };
+    {
+        new Claim(ClaimTypes.Name, user.NombreUsuario),
+        new Claim(ClaimTypes.NameIdentifier, user.UsuarioID.ToString()),
+        new Claim(ClaimTypes.Role, user.Rol)
+    };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity),
-                new AuthenticationProperties { IsPersistent = true }); // IsPersistent = true para recordar la sesión
+                new AuthenticationProperties { IsPersistent = true });
 
             return RedirectToAction("Index", "Home");
         }

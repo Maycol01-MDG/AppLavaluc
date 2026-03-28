@@ -254,7 +254,6 @@ namespace AppLavaluc.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Rol")

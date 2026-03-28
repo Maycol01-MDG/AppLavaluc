@@ -70,3 +70,171 @@ body {
 .modal-content {
     border-radius: 15px;
 }
+
+.report-print-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 2px solid #0d6efd;
+    margin-bottom: 12px;
+}
+
+.report-print-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.report-logo {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.report-company {
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.1;
+}
+
+.report-subtitle {
+    color: #6c757d;
+    font-size: 12px;
+}
+
+.report-print-header-right {
+    text-align: right;
+}
+
+.report-title {
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.1;
+}
+
+.report-range {
+    color: #495057;
+    font-size: 12px;
+}
+
+.report-meta {
+    color: #6c757d;
+    font-size: 11px;
+}
+
+.report-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.report-kpi {
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+}
+
+.report-kpi-label {
+    color: #6c757d;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.report-kpi-value {
+    font-weight: 700;
+    font-size: 16px;
+    margin-top: 6px;
+    line-height: 1.1;
+}
+
+.report-preview-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 10px 0;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 12px;
+}
+
+.print-mode {
+    background: #ffffff !important;
+}
+
+.print-mode header,
+.print-mode .sidebar-container,
+.print-mode .navbar-spacer,
+.print-mode footer {
+    display: none !important;
+}
+
+.print-mode .cuerpo-principal {
+    margin-left: 0 !important;
+    padding-top: 0 !important;
+}
+
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 10mm;
+    }
+
+    html, body {
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    header,
+    .sidebar-container,
+    .navbar-spacer,
+    footer,
+    .report-no-print,
+    .btn,
+    form {
+        display: none !important;
+    }
+
+    .container, .container-fluid {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+    }
+
+    .table {
+        font-size: 10px;
+    }
+
+    .table th, .table td {
+        padding: 0.35rem 0.35rem;
+    }
+
+    tr, td, th {
+        page-break-inside: avoid;
+    }
+
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .text-white {
+        color: #000 !important;
+    }
+
+    .card-header {
+        background: #ffffff !important;
+    }
+}
