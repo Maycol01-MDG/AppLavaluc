@@ -6,6 +6,8 @@
 *.db
 *.db-shm
 *.db-wal
+*.csproj.user
+*.sln.DotSettings.user
 
 # Build results
 bin/
@@ -14,6 +16,7 @@ __verify_build/
 
 # ASP.NET Core
 appsettings.Development.json
+AppLavaluc/appsettings.Development.json
 
 # Logs
 *.log
