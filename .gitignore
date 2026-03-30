@@ -10,6 +10,7 @@
 # Build results
 bin/
 obj/
+__verify_build/
 
 # ASP.NET Core
 appsettings.Development.json
