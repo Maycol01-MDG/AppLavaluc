@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AppLavaluc.Migrations
 {
     [DbContext(typeof(LavanderiaContext))]
-    [Migration("20260328165154_Inicial")]
+    [Migration("20260331012027_Inicial")]
     partial class Inicial
     {
         /// <inheritdoc />
