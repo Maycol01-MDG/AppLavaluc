@@ -1,5 +1,6 @@
 using AppLavaluc.Data;
 using AppLavaluc.Models;
+using AppLavaluc.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +12,12 @@ namespace AppLavaluc.Controllers
     public class OrdenController : Controller
     {
         private readonly LavanderiaContext _db;
+        private readonly EscPosTicketPrinter _ticketPrinter;
 
-        public OrdenController(LavanderiaContext db)
+        public OrdenController(LavanderiaContext db, EscPosTicketPrinter ticketPrinter)
         {
             _db = db;
+            _ticketPrinter = ticketPrinter;
         }
 
         // ✅ LISTAR ÓRDENES
@@ -186,8 +189,27 @@ namespace AppLavaluc.Controllers
 
                 TempData["Mensaje"] = $"✅ Orden #{orden.OrdenID} creada correctamente.";
                 TempData["Tipo"] = "success";
-                // Esto te envía directo a la vista de impresión con el ID de la orden recién creada
-                return RedirectToAction("ImprimirTicket", new { id = orden.OrdenID });
+
+                var ordenParaImprimir = _db.Ordenes
+                    .Include(o => o.Cliente)
+                    .Include(o => o.Detalles)
+                    .ThenInclude(d => d.Servicio)
+                    .FirstOrDefault(o => o.OrdenID == orden.OrdenID);
+
+                string? printError = null;
+                var imprimio = ordenParaImprimir != null && _ticketPrinter.TryPrintOrder(ordenParaImprimir, out printError);
+                if (imprimio)
+                {
+                    TempData["Mensaje"] = $"✅ Orden #{orden.OrdenID} creada e impresa correctamente.";
+                    TempData["Tipo"] = "success";
+                }
+                else
+                {
+                    var motivo = ordenParaImprimir == null ? "No se pudo cargar la orden para imprimir." : (printError ?? "");
+                    TempData["Error"] = $"La orden se registró, pero no se pudo imprimir el ticket. {motivo}".Trim();
+                }
+
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
@@ -480,6 +502,18 @@ namespace AppLavaluc.Controllers
             _db.SaveChanges();
 
             TempData["Mensaje"] = $"✅ Orden #{idOrden} entregada y cobrada correctamente.";
+
+            var ordenParaImprimir = _db.Ordenes
+                .Include(o => o.Cliente)
+                .Include(o => o.Detalles)
+                .ThenInclude(d => d.Servicio)
+                .FirstOrDefault(o => o.OrdenID == idOrden);
+
+            if (ordenParaImprimir != null && !_ticketPrinter.TryPrintOrder(ordenParaImprimir, out var printError))
+            {
+                TempData["Error"] = $"La orden se finalizó, pero no se pudo imprimir el ticket. {(printError ?? "")}".Trim();
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

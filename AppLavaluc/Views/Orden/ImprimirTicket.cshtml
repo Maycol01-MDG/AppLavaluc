@@ -1,6 +1,13 @@
 @model AppLavaluc.Models.Orden
 @{
     Layout = null;
+    var paper = ViewContext.HttpContext.Request.Query["paper"].ToString();
+    var paperWidth = paper == "58" ? "58mm" : "80mm";
+    var baseFontSize = paper == "58" ? "13px" : "14px";
+    var qtyWidth = paper == "58" ? "8mm" : "10mm";
+    var totalWidth = paper == "58" ? "16mm" : "18mm";
+    var autoPrint = ViewContext.HttpContext.Request.Query["autoprint"].ToString() == "1";
+    var returnUrl = ViewContext.HttpContext.Request.Query["returnUrl"].ToString();
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -9,260 +16,307 @@
     <title>Ticket #@Model.OrdenID</title>
 
     <style>
-        /* RESET Y CONFIGURACIÓN BÁSICA */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            color: #000000;
+            font-family: "Arial", "Verdana", "Tahoma", sans-serif;
+            font-size: @baseFontSize;
+            line-height: 1.2;
+            font-variant-numeric: tabular-nums;
+            font-weight: 400;
+        }
+
         body {
-            /* FUENTE ANCHA Y GRUESA IDEAL PARA IMPRESORAS TÉRMICAS */
-            font-family: 'Verdana', 'Arial', sans-serif; 
+            width: @paperWidth;
+        }
+
+        .no-print {
+            padding: 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .btn {
+            border: 1px solid #000;
             background: #fff;
             color: #000;
-            font-size: 16px; 
-            font-weight: 800; /* Todo en negrita por defecto */
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
         }
 
-        /* CONTENEDOR PRINCIPAL */
         .ticket {
-            width: 80mm;
-            margin: 0 auto;
-            padding: 10px 0;
+            width: @paperWidth;
+            padding: 2mm;
         }
 
-        /* UTILIDADES DE TEXTO */
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-left { text-align: left; }
-        
-        .bold { font-weight: 900; } /* Negrita máxima */
-        .uppercase { text-transform: uppercase; }
-
-        /* SEPARADORES MÁS GRUESOS */
-        .dashed-line {
-            border-top: 3px dashed #000; 
-            margin: 15px 0;
-            width: 100%;
-        }
-
-        .solid-line {
-            border-top: 4px solid #000; 
-            margin: 15px 0;
-            width: 100%;
-        }
-
-        /* ENCABEZADO */
-        .header-logo {
-            font-size: 34px; 
-            font-weight: 900;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
-        }
-
-        .header-info {
-            font-size: 18px; 
-            margin-bottom: 5px;
-        }
-
-        /* CAJA DE INFORMACIÓN DEL CLIENTE */
-        .client-box {
-            border: 3px solid #000; /* Borde muy marcado */
-            padding: 12px;
-            border-radius: 8px;
-            margin: 15px 0;
-            font-size: 18px; 
-            line-height: 1.5;
-        }
-
-        /* TABLA DE PRODUCTOS */
-        table {
-            width: 100%;
-            font-size: 18px; 
-            border-collapse: collapse;
-        }
-
-        th {
-            text-align: left;
-            border-bottom: 3px solid #000;
-            padding-bottom: 10px;
-            font-size: 18px;
-        }
-
-        td {
-            padding: 8px 0;
-            vertical-align: top;
-        }
-
-        /* SECCIÓN DE TOTALES */
-        .totals-box {
-            margin-top: 15px;
-            font-size: 20px; 
-        }
-
-        .totals-box td {
-            padding: 8px 0;
-        }
-
-        /* ESTADO DE DEUDA (VISUALMENTE IMPACTANTE) */
-        .debt-alert {
-            margin-top: 20px;
-            border: 4px solid #000;
-            padding: 15px;
-            font-size: 24px; 
-            font-weight: 900;
-            border-radius: 10px;
-        }
-
-        .paid-badge {
-            margin-top: 20px;
-            border: 4px solid #000;
-            padding: 15px;
-            font-size: 24px; 
-            font-weight: 900;
-            border-radius: 20px;
-        }
-
-        /* PIE DE PÁGINA */
-        .footer {
-            margin-top: 30px;
-            font-size: 16px; 
+        .center {
             text-align: center;
-            line-height: 1.6;
         }
 
-        .barcode {
-            margin-top: 15px;
-            height: 60px; 
-            background: repeating-linear-gradient( to right, #000 0px, #000 4px, #fff 4px, #fff 8px, #000 8px, #000 12px ); 
-            width: 90%;
-            margin-left: 5%;
+        .right {
+            text-align: right;
         }
 
-        /* AJUSTES EXCLUSIVOS PARA IMPRESIÓN (MUY IMPORTANTE) */
+        .bold {
+            font-weight: 700;
+        }
+
+        .sep {
+            border-top: 1px dashed #000;
+            margin: 2mm 0;
+        }
+
+        .sep-solid {
+            border-top: 2px solid #000;
+            margin: 2mm 0;
+        }
+
+        .header-title {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .header-line {
+            font-size: 11px;
+            margin-top: 1mm;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            margin: 1mm 0;
+        }
+
+        .box {
+            border: 1px solid #000;
+            padding: 2mm;
+            border-radius: 2mm;
+        }
+
+        .box-line {
+            margin-top: 1mm;
+        }
+
+        .items-header {
+            display: flex;
+            gap: 6px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 1mm;
+            margin-bottom: 1mm;
+        }
+
+        .col-name {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .col-qty {
+            width: @qtyWidth;
+            text-align: center;
+            flex: 0 0 auto;
+        }
+
+        .col-total {
+            width: @totalWidth;
+            text-align: right;
+            flex: 0 0 auto;
+        }
+
+        .item {
+            display: flex;
+            gap: 6px;
+            padding: 1mm 0;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .item-name {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .item-subline {
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        .totals {
+            display: flex;
+            flex-direction: column;
+            gap: 1mm;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .grand-total {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .note {
+            margin-top: 2mm;
+            border: 1px dotted #000;
+            padding: 2mm;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .footer {
+            margin-top: 3mm;
+            text-align: center;
+            font-size: 11px;
+        }
+
         @@media print {
-            body {
+            @@page {
+                size: @paperWidth auto;
                 margin: 0;
-                font-size: 18pt !important; /* Letra base gigante para el papel */
-                color: #000; 
+            }
+
+            html, body {
+                width: @paperWidth;
+                margin: 0;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
 
             .no-print {
-                display: none;
+                display: none !important;
             }
 
             .ticket {
-                width: 80mm;
-                margin: 0;
+                width: @paperWidth;
+                padding: 2mm;
+            }
+
+            tr, td, th, .item {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
         }
 
     </style>
 </head>
-<body onload="window.print()">
+<body>
+
+    @if (!autoPrint)
+    {
+        <div class="no-print">
+            <button type="button" class="btn" onclick="window.print()">Imprimir</button>
+            <button type="button" class="btn" onclick="window.close()">Cerrar</button>
+        </div>
+    }
 
     <div class="ticket">
 
-        <div class="text-center">
-            <div class="header-logo">💧 APP LAVALUC</div>
-            <div class="header-info">Av. Principal 123, Centro</div>
-            <div class="header-info">Tel: (01) 999-999-999</div>
-            <div class="header-info">RUC: 10123456789</div>
+        <div class="center">
+            <div class="header-title">APP LAVALUC</div>
+            <div class="header-line">Av. Principal 123, Centro</div>
+            <div class="header-line">Tel: (01) 999-999-999</div>
+            <div class="header-line">RUC: 10123456789</div>
         </div>
 
-        <div class="dashed-line"></div>
+        <div class="sep"></div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 16px; margin: 15px 0;">
-            <span>ORDEN: #@Model.OrdenID.ToString("D6")</span>
-            <span>@Model.FechaRecepcion.ToString("dd/MM/yy HH:mm")</span>
+        <div class="meta-row">
+            <div class="bold">ORDEN: #@Model.OrdenID.ToString("D6")</div>
+            <div>@Model.FechaRecepcion.ToString("dd/MM/yy HH:mm")</div>
         </div>
 
-        <div class="client-box">
-            <div class="bold uppercase" style="font-size: 22px;">@Model.Cliente?.NombreCompleto</div>
-            <div>Tel: @(Model.Cliente?.Telefono ?? "--")</div>
-            <div style="margin-top: 8px;">
-                Entrega: <span class="bold">@Model.TipoEntrega</span>
-            </div>
-            <div>
-                Fecha Est.: <span class="bold">@(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "Por confirmar")</span>
-            </div>
+        <div class="box">
+            <div class="bold">@Model.Cliente?.NombreCompleto</div>
+            <div class="box-line">Tel: @(Model.Cliente?.Telefono ?? "--")</div>
+            <div class="box-line">Entrega: <span class="bold">@Model.TipoEntrega</span></div>
+            <div class="box-line">Fecha Est.: <span class="bold">@(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "Por confirmar")</span></div>
         </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 50%;">DESCRIPCIÓN</th>
-                    <th class="text-center" style="width: 20%;">CANT</th>
-                    <th class="text-right" style="width: 30%;">IMPORTE</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model.Detalles)
-                {
-                    <tr>
-                        <td>
-                            <div class="bold" style="font-size: 18px;">@item.Servicio?.NombreServicio</div>
-                            @if (item.Descuento > 0)
-                            {
-                                <div style="font-size: 14px; font-weight: normal;">(Desc: -@item.Descuento.ToString("0.00"))</div>
-                            }
-                        </td>
-                        <td class="text-center" style="font-size: 20px;">@item.Cantidad</td>
-                        <td class="text-right" style="font-size: 20px;">@item.Total.ToString("0.00")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="items-header bold">
+            <div class="col-name">DESCRIPCIÓN</div>
+            <div class="col-qty">CANT</div>
+            <div class="col-total">IMPORTE</div>
+        </div>
 
-        <div class="solid-line"></div>
-
-        <table class="totals-box">
-            <tr>
-                <td class="text-right">TOTAL A PAGAR:</td>
-                <td class="text-right bold" style="font-size: 24px;">S/. @Model.MontoTotal.ToString("F2")</td>
-            </tr>
-            <tr>
-                <td class="text-right">A CUENTA:</td>
-                <td class="text-right" style="font-size: 22px;">S/. @Model.MontoPagado.ToString("F2")</td>
-            </tr>
-        </table>
-
-        <div class="text-center">
-            @if (Model.SaldoPendiente > 0)
-            {
-                <div class="debt-alert">
-                    <div>RESTA PAGAR:</div>
-                    <div style="font-size: 32px; margin: 10px 0;">S/. @Model.SaldoPendiente.ToString("F2")</div>
-                    <div style="font-size: 16px; font-weight: normal;">(Pago Pendiente)</div>
+        @foreach (var item in Model.Detalles)
+        {
+            <div class="item">
+                <div class="col-name">
+                    <div class="item-name">@item.Servicio?.NombreServicio</div>
+                    @if (item.Descuento > 0)
+                    {
+                        <div class="item-subline">(Desc: -@item.Descuento.ToString("0.00"))</div>
+                    }
                 </div>
-            }
-            else
-            {
-                <div class="paid-badge">
-                    ¡CANCELADO!
-                    <div style="font-size: 16px; font-weight: normal; margin-top: 5px;">No existen deudas</div>
-                </div>
-            }
+                <div class="col-qty">@item.Cantidad</div>
+                <div class="col-total">@item.Total.ToString("0.00")</div>
+            </div>
+        }
+
+        <div class="sep-solid"></div>
+
+        <div class="totals">
+            <div class="total-row grand-total">
+                <div class="bold">TOTAL:</div>
+                <div class="right bold">S/. @Model.MontoTotal.ToString("F2")</div>
+            </div>
+            <div class="total-row">
+                <div>A CUENTA:</div>
+                <div class="right">S/. @Model.MontoPagado.ToString("F2")</div>
+            </div>
+            <div class="total-row">
+                <div>RESTO:</div>
+                <div class="right bold">S/. @Model.SaldoPendiente.ToString("F2")</div>
+            </div>
         </div>
 
         @if (!string.IsNullOrEmpty(Model.Observaciones))
         {
-            <div style="margin-top: 25px; font-size: 16px; border: 3px dotted #000; padding: 15px;">
-                <strong>NOTA:</strong> @Model.Observaciones
+            <div class="note">
+                <span class="bold">NOTA:</span> @Model.Observaciones
             </div>
         }
 
         <div class="footer">
-            <div class="barcode"></div> 
-            <p style="margin-top: 10px; font-size: 20px; font-weight: 900;">@Model.OrdenID</p>
-            <br />
             <p>*** GRACIAS POR SU PREFERENCIA ***</p>
             <p>Revise sus prendas antes de retirar.</p>
             <p>No hay lugar a reclamo pasadas las 24hrs.</p>
-            <p style="margin-top: 15px; font-size: 14px; font-weight: normal;">AppLavaluc System</p>
+            <p>@Model.OrdenID</p>
         </div>
 
     </div>
+
+    @if (autoPrint)
+    {
+        <script>
+            window.addEventListener('load', () => {
+                const returnUrl = @System.Text.Json.JsonSerializer.Serialize(returnUrl);
+                document.body.style.visibility = 'hidden';
+                window.onbeforeprint = () => {
+                    document.body.style.visibility = 'visible';
+                };
+                window.onafterprint = () => {
+                    if (returnUrl) {
+                        window.location.href = returnUrl;
+                    }
+                };
+                window.print();
+            });
+        </script>
+    }
 </body>
 </html>

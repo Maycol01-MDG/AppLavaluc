@@ -1,4 +1,5 @@
 using AppLavaluc.Data;
+using AppLavaluc.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
@@ -13,6 +14,8 @@ builder.Services.AddDbContext<LavanderiaContext>(options =>
 );
 
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddSingleton<EscPosTicketPrinter>();
 
 // Configuración de Autenticación por Cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
