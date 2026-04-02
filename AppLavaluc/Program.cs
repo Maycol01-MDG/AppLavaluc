@@ -57,7 +57,9 @@ using (var scope = app.Services.CreateScope())
         // 1. ESTO OBLIGA A ENTITY FRAMEWORK A CREAR LA BASE DE DATOS Y LAS TABLAS SI NO EXISTEN
         context.Database.EnsureCreated();
 
-        var adminUser = context.Usuarios.FirstOrDefault(u => u.Email == "admin@lavaluc.com");
+        var adminUser = context.Usuarios.FirstOrDefault(u =>
+            u.Email.ToLower() == "admin@lavaluc.com" ||
+            u.NombreUsuario.ToLower() == "admin");
 
         if (adminUser == null)
         {
