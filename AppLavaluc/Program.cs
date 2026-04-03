@@ -1,32 +1,50 @@
 using AppLavaluc.Data;
 using AppLavaluc.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuración de MySQL con Pomelo
+// ─────────────────────────────────────────────────────────────
+// SERVICIOS
+// ─────────────────────────────────────────────────────────────
+
+// Base de datos MySQL con Pomelo
 builder.Services.AddDbContext<LavanderiaContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("LavalucContext"),
-        new MySqlServerVersion(new Version(8, 0, 40))
+        new MySqlServerVersion(new Version(8, 0, 40)),
+        mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null)
     )
 );
 
 builder.Services.AddControllersWithViews();
 
+// ✅ Impresora térmica: Singleton porque es un recurso de hardware compartido
 builder.Services.AddSingleton<EscPosTicketPrinter>();
 
-// Configuración de Autenticación por Cookies
+// ✅ NUEVO: registrar el servicio de órdenes con su interfaz
+builder.Services.AddScoped<IOrdenService, OrdenService>();
+
+// Autenticación por cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Cuenta/Login";
         options.LogoutPath = "/Cuenta/Logout";
-        options.AccessDeniedPath = "/Home/AccessDenied"; // Página para accesos no autorizados
+        options.AccessDeniedPath = "/Home/Error";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8); // Sesión de 8 horas
+        options.SlidingExpiration = true;
     });
 
 var app = builder.Build();
+
+// ─────────────────────────────────────────────────────────────
+// PIPELINE HTTP
+// ─────────────────────────────────────────────────────────────
 
 if (!app.Environment.IsDevelopment())
 {
@@ -37,31 +55,31 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
-app.UseAuthentication(); // Habilita la autenticación
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}"
-);
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
-/// Seed de datos para el usuario inicial
+// ─────────────────────────────────────────────────────────────
+// SEED DE DATOS: usuario administrador inicial
+// ─────────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
     try
     {
         var context = services.GetRequiredService<LavanderiaContext>();
+        context.Database.Migrate();
 
-        // 1. ESTO OBLIGA A ENTITY FRAMEWORK A CREAR LA BASE DE DATOS Y LAS TABLAS SI NO EXISTEN
-        context.Database.EnsureCreated();
-
-        var adminUser = context.Usuarios.FirstOrDefault(u =>
+        bool adminExiste = context.Usuarios.Any(u =>
             u.Email.ToLower() == "admin@lavaluc.com" ||
             u.NombreUsuario.ToLower() == "admin");
 
-        if (adminUser == null)
+        if (!adminExiste)
         {
             context.Usuarios.Add(new AppLavaluc.Models.Usuario
             {
@@ -73,23 +91,15 @@ using (var scope = app.Services.CreateScope())
                 Activo = true
             });
             context.SaveChanges();
-            Console.WriteLine("¡ÉXITO! El usuario administrador fue creado en la base de datos.");
+            logger.LogInformation("Usuario administrador creado correctamente.");
         }
     }
     catch (Exception ex)
     {
-        // 2. ESTO IMPRIMIRÁ EL ERROR REAL DE MYSQL EN TU CONSOLA NEGRA
-        Console.WriteLine("==================================================");
-        Console.WriteLine("ERROR FATAL AL CREAR EL USUARIO EN MYSQL:");
-        Console.WriteLine(ex.Message);
+        logger.LogError(ex, "Error durante el seed de datos al iniciar la aplicación.");
+        Console.WriteLine("ERROR FATAL EN SEED: " + ex.Message);
         if (ex.InnerException != null)
-        {
-            Console.WriteLine("DETALLE DEL ERROR: " + ex.InnerException.Message);
-        }
-        Console.WriteLine("==================================================");
-
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Ocurrió un error durante el sembrado de datos.");
+            Console.WriteLine("DETALLE: " + ex.InnerException.Message);
     }
 }
 

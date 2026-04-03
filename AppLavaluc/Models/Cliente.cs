@@ -8,20 +8,26 @@ namespace AppLavaluc.Models
         public int ClienteID { get; set; }
 
         [Required(ErrorMessage = "El nombre del cliente es obligatorio")]
+        [StringLength(100)]
         [Display(Name = "Nombre")]
-        public string Nombre { get; set; }
+        public string Nombre { get; set; } = string.Empty;
 
+        [StringLength(100)]
         [Display(Name = "Apellidos")]
         public string? Apellidos { get; set; }
 
+        [Phone(ErrorMessage = "Ingrese un teléfono válido")]
+        [StringLength(20)]
         public string? Telefono { get; set; }
-        [EmailAddress]
+
+        [EmailAddress(ErrorMessage = "Ingrese un email válido")]
+        [StringLength(150)]
         public string? Email { get; set; }
+        public string NombreCompleto =>
+            string.IsNullOrWhiteSpace(Apellidos)
+                ? Nombre
+                : $"{Nombre} {Apellidos}";
 
-
-        // Propiedad calculada que devuelve el nombre completo.
-        // Si mañana agregas Apellidos, puedes cambiar la concatenación.
-        public string NombreCompleto => Nombre; // Por ahora solo Nombre
         public ICollection<Orden>? Ordenes { get; set; }
     }
 }

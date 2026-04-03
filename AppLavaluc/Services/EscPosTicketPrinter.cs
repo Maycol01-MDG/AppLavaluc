@@ -10,27 +10,33 @@ namespace AppLavaluc.Services
 {
     public sealed class EscPosTicketPrinter
     {
-        private readonly string _printerName;
+        private readonly string _primaryPrinterName;
+        private readonly string _configuredPrinterName;
+        private readonly int _copies;
 
         public EscPosTicketPrinter(IConfiguration configuration)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            _printerName = configuration["ThermalPrinter:Name"] ?? "";
-            if (string.IsNullOrWhiteSpace(_printerName))
+            _configuredPrinterName = (configuration["ThermalPrinter:Name"] ?? "").Trim();
+            if (!int.TryParse(configuration["ThermalPrinter:Copies"], out _copies) || _copies < 1)
             {
-                if (!RawPrinterHelper.TryGetDefaultPrinterName(out var defaultPrinter) || string.IsNullOrWhiteSpace(defaultPrinter))
-                {
-                    defaultPrinter = "";
-                }
-
-                _printerName = defaultPrinter;
+                _copies = 2;
             }
 
-            if (string.IsNullOrWhiteSpace(_printerName))
+            var selected = _configuredPrinterName;
+            if (string.IsNullOrWhiteSpace(selected) && RawPrinterHelper.TryGetDefaultPrinterName(out var defaultPrinter))
             {
-                _printerName = "XP-80T";
+                selected = (defaultPrinter ?? "").Trim();
             }
+
+            if (string.IsNullOrWhiteSpace(selected))
+            {
+                selected = "XP-80T";
+            }
+
+            _primaryPrinterName = selected;
         }
+        
 
         public bool TryPrintOrder(Orden orden, out string? error)
         {
@@ -43,14 +49,46 @@ namespace AppLavaluc.Services
             }
 
             var bytes = BuildTicketBytes(orden);
-            return RawPrinterHelper.TrySendBytes(_printerName, bytes, out error);
+            if (RawPrinterHelper.TrySendBytes(_primaryPrinterName, bytes, out error))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_configuredPrinterName) && RawPrinterHelper.TryGetDefaultPrinterName(out var defaultPrinterName))
+            {
+                var defaultName = (defaultPrinterName ?? "").Trim();
+                if (!string.IsNullOrWhiteSpace(defaultName) && !string.Equals(defaultName, _primaryPrinterName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (RawPrinterHelper.TrySendBytes(defaultName, bytes, out var error2))
+                    {
+                        error = null;
+                        return true;
+                    }
+
+                    error = string.IsNullOrWhiteSpace(error2) ? error : $"{error} | FallbackDefault: {error2}";
+                }
+            }
+
+            return false;
         }
 
-        private static byte[] BuildTicketBytes(Orden orden)
+        private byte[] BuildTicketBytes(Orden orden)
         {
             var enc = Encoding.GetEncoding(850);
             var buffer = new List<byte>(4096);
 
+            var copies = Math.Clamp(_copies, 1, 5);
+            for (var i = 0; i < copies; i++)
+            {
+                var label = i == 0 ? "COPIA CLIENTE" : "COPIA REGISTRO";
+                AppendTicket(buffer, enc, orden, label);
+            }
+
+            return buffer.ToArray();
+        }
+
+        private static void AppendTicket(List<byte> buffer, Encoding enc, Orden orden, string copyLabel)
+        {
             void Add(params byte[] b) => buffer.AddRange(b);
             void AddText(string s) => buffer.AddRange(enc.GetBytes(s));
             void AddLine(string s = "")
@@ -69,6 +107,7 @@ namespace AppLavaluc.Services
 
             Add(0x1B, 0x61, 0x01);
             Add(0x1B, 0x45, 0x01);
+            AddLine(copyLabel);
             AddLine("APP LAVALUC");
             Add(0x1B, 0x45, 0x00);
             AddLine("Av. Principal 123, Centro");
@@ -155,8 +194,6 @@ namespace AppLavaluc.Services
 
             Add(0x0A, 0x0A, 0x0A);
             Add(0x1D, 0x56, 0x42, 0x00);
-
-            return buffer.ToArray();
         }
 
         private static string TwoColumns(string left, string right, int width)

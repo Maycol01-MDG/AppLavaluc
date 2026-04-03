@@ -1,10 +1,10 @@
 using AppLavaluc.Data;
 using AppLavaluc.Models;
 using AppLavaluc.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
 
 namespace AppLavaluc.Controllers
 {
@@ -12,44 +12,56 @@ namespace AppLavaluc.Controllers
     public class OrdenController : Controller
     {
         private readonly LavanderiaContext _db;
-        private readonly EscPosTicketPrinter _ticketPrinter;
+        private readonly IOrdenService _ordenService;
+        private readonly EscPosTicketPrinter _printer;
+        private readonly ILogger<OrdenController> _logger;
 
-        public OrdenController(LavanderiaContext db, EscPosTicketPrinter ticketPrinter)
+        public OrdenController(
+            LavanderiaContext db,
+            IOrdenService ordenService,
+            EscPosTicketPrinter printer,
+            ILogger<OrdenController> logger)
         {
             _db = db;
-            _ticketPrinter = ticketPrinter;
+            _ordenService = ordenService;
+            _printer = printer;
+            _logger = logger;
         }
 
-        // ✅ LISTAR ÓRDENES
-        public IActionResult Index()
+        // ─────────────────────────────────────────────────────────────
+        // LISTAR ÓRDENES
+        // ─────────────────────────────────────────────────────────────
+        public async Task<IActionResult> Index()
         {
-            var ordenes = _db.Ordenes
+            var ordenes = await _db.Ordenes
                 .Include(o => o.Cliente)
                 .Include(o => o.Detalles)
-                .ThenInclude(d => d.Servicio)
+                    .ThenInclude(d => d.Servicio)
                 .OrderByDescending(o => o.OrdenID)
-                .ToList();
+                .AsNoTracking()
+                .ToListAsync();
 
             return View(ordenes);
         }
 
-        // ✅ CREAR ORDEN - GET
+        // ─────────────────────────────────────────────────────────────
+        // CREAR ORDEN - GET
+        // ─────────────────────────────────────────────────────────────
         public IActionResult Crear()
         {
-            // Cargar categorías para el dropdown
-            var categorias = _db.Categorias.OrderBy(c => c.NombreCategoria).ToList();
-            ViewBag.Categorias = new SelectList(categorias, "CategoriaID", "NombreCategoria");
-
+            CargarCategoriasEnViewBag();
             return View();
         }
 
-        // ✅ OBTENER SERVICIOS POR CATEGORÍA - AJAX
+        // ─────────────────────────────────────────────────────────────
+        // SERVICIOS POR CATEGORÍA - AJAX
+        // ─────────────────────────────────────────────────────────────
         [HttpGet]
-        public JsonResult ObtenerServiciosPorCategoria(int categoriaId)
+        public async Task<JsonResult> ObtenerServiciosPorCategoria(int categoriaId)
         {
             try
             {
-                var servicios = _db.Servicios
+                var servicios = await _db.Servicios
                     .Where(s => s.CategoriaID == categoriaId)
                     .Select(s => new
                     {
@@ -60,466 +72,275 @@ namespace AppLavaluc.Controllers
                         s.UnidadMedida
                     })
                     .OrderBy(s => s.NombreServicio)
-                    .ToList();
-
-                if (servicios.Count == 0)
-                    return Json(new { success = true, data = servicios, message = "Sin servicios en esta categoría" });
+                    .ToListAsync();
 
                 return Json(new { success = true, data = servicios });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Error: {ex.Message}" });
+                _logger.LogError(ex, "Error al obtener servicios para categoría {CategoriaId}", categoriaId);
+                return Json(new { success = false, message = "Error al obtener los servicios." });
             }
         }
 
-        // ✅ CREAR ORDEN - POST
+        // ─────────────────────────────────────────────────────────────
+        // CREAR ORDEN - POST
+        // ─────────────────────────────────────────────────────────────
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Crear(
+        public async Task<IActionResult> Crear(
             string nombreCliente,
             string apellidosCliente,
             string? telefonoCliente,
             string tipoEntrega,
             decimal montoPagado,
-            decimal saldoPendiente,
-            string estadoPago,
-
             DateTime? fechaEntregaEstimada,
             string? observaciones,
             [FromForm] string servicioIds,
             [FromForm] string cantidades,
             [FromForm] string descuentos)
         {
-            try
+            // Validaciones básicas
+            if (string.IsNullOrWhiteSpace(nombreCliente) ||
+                string.IsNullOrWhiteSpace(apellidosCliente) ||
+                string.IsNullOrWhiteSpace(tipoEntrega))
             {
-                // ============================================
-                // 1️⃣ VALIDAR DATOS DEL CLIENTE
-                // ============================================
-                if (string.IsNullOrWhiteSpace(nombreCliente))
-                {
-                    TempData["Error"] = "El nombre del cliente es obligatorio.";
-                    return RedirectToAction(nameof(Crear));
-                }
-
-                if (string.IsNullOrWhiteSpace(apellidosCliente))
-                {
-                    TempData["Error"] = "Los apellidos del cliente son obligatorios.";
-                    return RedirectToAction(nameof(Crear));
-                }
-
-                if (string.IsNullOrWhiteSpace(tipoEntrega))
-                {
-                    TempData["Error"] = "Debe seleccionar un tipo de entrega.";
-                    return RedirectToAction(nameof(Crear));
-                }
-
-                // ============================================
-                // 2️⃣ VALIDAR Y PARSEAR DATOS DE SERVICIOS
-                // ============================================
-                var servicioIdList = this.ParsearListaIntegers(servicioIds);
-                var cantidadList = this.ParsearListaIntegers(cantidades);
-                var descuentoList = this.ParsearListaDecimales(descuentos);
-
-                if (servicioIdList.Count == 0)
-                {
-                    TempData["Error"] = "Debe agregar al menos un servicio a la orden.";
-                    return RedirectToAction(nameof(Crear));
-                }
-
-                // ============================================
-                // 3️⃣ BUSCAR O CREAR CLIENTE
-                // ============================================
-                var cliente = this.ObtenerOCrearCliente(
-                    nombreCliente.Trim(),
-                    apellidosCliente.Trim(),
-                    telefonoCliente?.Trim());
-
-                // ============================================
-                // 4️⃣ CREAR ORDEN
-                // ============================================
-                var orden = new Orden
-                {
-                    ClienteID = cliente.ClienteID,
-                    FechaRecepcion = DateTime.Now,
-                    FechaEntregaEstimada = fechaEntregaEstimada,
-                    Estado = "Recibido",
-                    TipoEntrega = tipoEntrega,
-                    Telefono = telefonoCliente?.Trim(),
-                    Observaciones = observaciones?.Trim(),
-                    MontoTotal = 0,
-
-
-                    MontoPagado = montoPagado,
-                    SaldoPendiente = saldoPendiente,
-                    EstadoPago = estadoPago,
-                    EstadoRecojo = "Pendiente",
-                };
-
-                _db.Ordenes.Add(orden);
-                _db.SaveChanges();
-
-                // ============================================
-                // 5️⃣ AGREGAR DETALLES Y CALCULAR TOTAL
-                // ============================================
-                decimal totalGeneral = this.AgregarDetallesOrden(orden, servicioIdList, cantidadList, descuentoList);
-
-                // ============================================
-                // 6️⃣ ACTUALIZAR TOTAL DE LA ORDEN
-                // ============================================
-                orden.MontoTotal = totalGeneral;
-                _db.SaveChanges();
-
-                // ============================================
-                // 7️⃣ REGISTRAR EL PAGO INICIAL (SI EXISTE)
-                // ============================================
-                if (montoPagado > 0)
-                {
-                    var pagoInicial = new Pago
-                    {
-                        OrdenID = orden.OrdenID,
-                        Monto = montoPagado,
-                        FechaPago = DateTime.Now,
-                        MetodoPago = "Efectivo", // Por defecto, podrías hacerlo dinámico después
-                        Notas = "Pago inicial al crear la orden"
-                    };
-                    _db.Pagos.Add(pagoInicial);
-                    _db.SaveChanges();
-                }
-
-                TempData["Mensaje"] = $"✅ Orden #{orden.OrdenID} creada correctamente.";
-                TempData["Tipo"] = "success";
-
-                var ordenParaImprimir = _db.Ordenes
-                    .Include(o => o.Cliente)
-                    .Include(o => o.Detalles)
-                    .ThenInclude(d => d.Servicio)
-                    .FirstOrDefault(o => o.OrdenID == orden.OrdenID);
-
-                string? printError = null;
-                var imprimio = ordenParaImprimir != null && _ticketPrinter.TryPrintOrder(ordenParaImprimir, out printError);
-                if (imprimio)
-                {
-                    TempData["Mensaje"] = $"✅ Orden #{orden.OrdenID} creada e impresa correctamente.";
-                    TempData["Tipo"] = "success";
-                }
-                else
-                {
-                    var motivo = ordenParaImprimir == null ? "No se pudo cargar la orden para imprimir." : (printError ?? "");
-                    TempData["Error"] = $"La orden se registró, pero no se pudo imprimir el ticket. {motivo}".Trim();
-                }
-
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Error al crear la orden: {ex.Message}";
+                TempData["Error"] = "Nombre, apellidos y tipo de entrega son obligatorios.";
+                CargarCategoriasEnViewBag();
                 return RedirectToAction(nameof(Crear));
             }
-        }
 
-        // ============================================
-        // 🔹 MÉTODO: Obtener o Crear Cliente
-        // ============================================
-        private Cliente ObtenerOCrearCliente(string nombre, string apellidos, string? telefono)
-        {
-            var clienteExistente = _db.Clientes.FirstOrDefault(c =>
-                c.Nombre == nombre && c.Apellidos == apellidos);
-
-            if (clienteExistente != null)
-                return clienteExistente;
-
-            var nuevoCliente = new Cliente
+            var request = new CrearOrdenRequest
             {
-                Nombre = nombre,
-                Apellidos = apellidos,
-                Telefono = telefono
+                NombreCliente = nombreCliente,
+                ApellidosCliente = apellidosCliente,
+                TelefonoCliente = telefonoCliente,
+                TipoEntrega = tipoEntrega,
+                MontoPagado = montoPagado,
+                FechaEntregaEstimada = fechaEntregaEstimada,
+                Observaciones = observaciones,
+                ServicioIds = ParsearIntegers(servicioIds),
+                Cantidades = ParsearIntegers(cantidades),
+                Descuentos = ParsearDecimales(descuentos)
             };
 
-            _db.Clientes.Add(nuevoCliente);
-            _db.SaveChanges();
+            var (ok, ordenId, error) = await _ordenService.CrearOrdenAsync(request);
 
-            return nuevoCliente;
-        }
-
-        // ============================================
-        // 🔹 MÉTODO: Agregar Detalles a la Orden
-        // ============================================
-        private decimal AgregarDetallesOrden(
-            Orden orden,
-            List<int> servicioIds,
-            List<int> cantidades,
-            List<decimal> descuentos)
-        {
-            decimal totalGeneral = 0;
-
-            for (int i = 0; i < servicioIds.Count; i++)
+            if (!ok)
             {
-                var servicio = _db.Servicios.Find(servicioIds[i]);
-
-                if (servicio == null)
-                    continue;
-
-                int cantidad = (i < cantidades.Count && cantidades[i] > 0) ? cantidades[i] : 0;
-                decimal descuento = (i < descuentos.Count && descuentos[i] > 0) ? descuentos[i] : 0;
-
-                if (cantidad <= 0)
-                    continue;
-
-                // Calcular total del detalle
-                decimal total = this.CalcularTotalDetalle(servicio.Precio, cantidad, descuento);
-
-                var detalle = new DetalleOrden
-                {
-                    OrdenID = orden.OrdenID,
-                    ServicioID = servicio.ServicioID,
-                    Cantidad = cantidad,
-                    PrecioUnitario = servicio.Precio,
-                    Descuento = descuento
-                };
-
-                _db.DetallesOrden.Add(detalle);
-                totalGeneral += total;
+                TempData["Error"] = error;
+                return RedirectToAction(nameof(Crear));
             }
 
-            if (_db.ChangeTracker.HasChanges())
-                _db.SaveChanges();
-
-            return totalGeneral;
+            await ImprimirYNotificarAsync(ordenId, $"✅ Orden #{ordenId} creada correctamente.");
+            return RedirectToAction(nameof(Index));
         }
 
-        // ============================================
-        // 🔹 MÉTODO: Calcular Total de Detalle
-        // ============================================
-        private decimal CalcularTotalDetalle(decimal precio, int cantidad, decimal descuento)
+        // ─────────────────────────────────────────────────────────────
+        // DETALLES
+        // ─────────────────────────────────────────────────────────────
+        public async Task<IActionResult> Detalles(int? id)
         {
-            decimal subtotal = precio * cantidad;
-            decimal total = subtotal - descuento;
-            return Math.Max(0, total);
-        }
+            if (id == null) return NotFound();
 
-        // ============================================
-        // 🔹 MÉTODO: Parsear Lista de Integers
-        // ============================================
-        private List<int> ParsearListaIntegers(string? valor)
-        {
-            if (string.IsNullOrWhiteSpace(valor))
-                return new List<int>();
-
-            return valor.Split(",", System.StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => int.TryParse(x.Trim(), out int result) ? result : 0)
-                .Where(x => x > 0)
-                .ToList();
-        }
-
-        // ============================================
-        // 🔹 MÉTODO: Parsear Lista de Decimales
-        // ============================================
-        private List<decimal> ParsearListaDecimales(string? valor)
-        {
-            if (string.IsNullOrWhiteSpace(valor))
-                return new List<decimal>();
-
-            return valor.Split(",", System.StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => decimal.TryParse(x.Trim(), out decimal result) ? result : 0)
-                .ToList();
-        }
-
-        // ✅ VER DETALLES DE ORDEN
-        public IActionResult Detalles(int? id)
-        {
-            if (id == null || id == 0)
-                return NotFound();
-
-            var orden = _db.Ordenes
+            var orden = await _db.Ordenes
                 .Include(o => o.Cliente)
                 .Include(o => o.Detalles)
-                .ThenInclude(d => d.Servicio)
-                .FirstOrDefault(o => o.OrdenID == id);
+                    .ThenInclude(d => d.Servicio)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.OrdenID == id);
 
-            if (orden == null)
-                return NotFound();
+            if (orden == null) return NotFound();
 
             return View(orden);
         }
 
-        // ✅ EDITAR ORDEN - GET
-        public IActionResult Editar(int? id)
+        // ─────────────────────────────────────────────────────────────
+        // EDITAR - GET
+        // ─────────────────────────────────────────────────────────────
+        public async Task<IActionResult> Editar(int? id)
         {
-            if (id == null || id == 0)
-                return NotFound();
+            if (id == null) return NotFound();
 
-            var orden = _db.Ordenes
+            var orden = await _db.Ordenes
                 .Include(o => o.Cliente)
                 .Include(o => o.Detalles)
-                .FirstOrDefault(o => o.OrdenID == id);
+                    .ThenInclude(d => d.Servicio)
+                .FirstOrDefaultAsync(o => o.OrdenID == id);
 
-            if (orden == null)
-                return NotFound();
+            if (orden == null) return NotFound();
 
-            ViewBag.Estados = new SelectList(new[] { "Recibido", "En Proceso", "Listo", "Entregado" }, orden.Estado);
             return View(orden);
         }
 
-        // ✅ EDITAR ORDEN - POST
+        // ─────────────────────────────────────────────────────────────
+        // EDITAR - POST
+        // ─────────────────────────────────────────────────────────────
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(int id, Orden ordenActualizada)
+        public async Task<IActionResult> Editar(int id, Orden ordenActualizada)
         {
-            if (id != ordenActualizada.OrdenID)
-                return NotFound();
+            if (id != ordenActualizada.OrdenID) return NotFound();
 
             try
             {
-                var orden = _db.Ordenes.Find(id);
-                if (orden == null)
-                    return NotFound();
+                var orden = await _db.Ordenes.FindAsync(id);
+                if (orden == null) return NotFound();
 
-                // Actualizar solo los campos permitidos
+                // Solo actualizar campos editables
                 orden.Estado = ordenActualizada.Estado;
                 orden.FechaEntregaEstimada = ordenActualizada.FechaEntregaEstimada;
                 orden.Observaciones = ordenActualizada.Observaciones;
                 orden.Telefono = ordenActualizada.Telefono;
+                orden.TipoEntrega = ordenActualizada.TipoEntrega;
 
-                _db.Ordenes.Update(orden);
-                _db.SaveChanges();
+                await _db.SaveChangesAsync();
 
                 TempData["Mensaje"] = $"✅ Orden #{id} actualizada correctamente.";
-                TempData["Tipo"] = "success";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error al actualizar: {ex.Message}";
+                _logger.LogError(ex, "Error al actualizar orden {OrdenId}", id);
+                TempData["Error"] = "Error al actualizar la orden.";
                 return RedirectToAction(nameof(Editar), new { id });
             }
         }
 
-        // ✅ ELIMINAR ORDEN - GET
-        public IActionResult Eliminar(int? id)
+        // ─────────────────────────────────────────────────────────────
+        // ELIMINAR - GET
+        // ─────────────────────────────────────────────────────────────
+        public async Task<IActionResult> Eliminar(int? id)
         {
-            if (id == null || id == 0)
-                return NotFound();
+            if (id == null) return NotFound();
 
-            var orden = _db.Ordenes
+            var orden = await _db.Ordenes
                 .Include(o => o.Cliente)
-                .Include(o => o.Detalles)
-                .FirstOrDefault(o => o.OrdenID == id);
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.OrdenID == id);
 
-            if (orden == null)
-                return NotFound();
+            if (orden == null) return NotFound();
 
             return View(orden);
         }
 
-        // ✅ ELIMINAR ORDEN - POST
+        // ─────────────────────────────────────────────────────────────
+        // ELIMINAR - POST
+        // ─────────────────────────────────────────────────────────────
         [HttpPost, ActionName("Eliminar")]
         [ValidateAntiForgeryToken]
-        public IActionResult EliminarConfirmado(int id)
+        public async Task<IActionResult> EliminarConfirmado(int id)
         {
             try
             {
-                var orden = _db.Ordenes
+                var orden = await _db.Ordenes
                     .Include(o => o.Detalles)
-                    .FirstOrDefault(o => o.OrdenID == id);
+                    .Include(o => o.Pagos)
+                    .FirstOrDefaultAsync(o => o.OrdenID == id);
 
-                if (orden == null)
-                    return NotFound();
+                if (orden == null) return NotFound();
 
-                _db.DetallesOrden.RemoveRange(orden.Detalles ?? new List<DetalleOrden>());
+                // Eliminar registros relacionados antes de la orden
+                if (orden.Detalles?.Any() == true)
+                    _db.DetallesOrden.RemoveRange(orden.Detalles);
+
+                if (orden.Pagos?.Any() == true)
+                    _db.Pagos.RemoveRange(orden.Pagos);
+
                 _db.Ordenes.Remove(orden);
-                _db.SaveChanges();
+                await _db.SaveChangesAsync();
 
                 TempData["Mensaje"] = $"✅ Orden #{id} eliminada correctamente.";
-                TempData["Tipo"] = "success";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error al eliminar: {ex.Message}";
+                _logger.LogError(ex, "Error al eliminar orden {OrdenId}", id);
+                TempData["Error"] = "Error al eliminar la orden.";
                 return RedirectToAction(nameof(Eliminar), new { id });
             }
         }
 
-        // ✅ IMPRIMIR TICKET
-        public IActionResult ImprimirTicket(int? id)
+        // ─────────────────────────────────────────────────────────────
+        // IMPRIMIR TICKET - GET (vista HTML)
+        // ─────────────────────────────────────────────────────────────
+        public async Task<IActionResult> ImprimirTicket(int? id)
         {
-            if (id == null || id == 0)
-                return NotFound();
+            if (id == null) return NotFound();
 
-            var orden = _db.Ordenes
-                .Include(o => o.Cliente)
-                .Include(o => o.Detalles)
-                .ThenInclude(d => d.Servicio)
-                .FirstOrDefault(o => o.OrdenID == id);
-
-            if (orden == null)
-                return NotFound();
+            var orden = await _ordenService.ObtenerOrdenConDetallesAsync(id.Value);
+            if (orden == null) return NotFound();
 
             return View(orden);
         }
 
-
-        // ✅ ACCIÓN PARA ENTREGAR Y COBRAR
+        // ─────────────────────────────────────────────────────────────
+        // ENTREGAR ORDEN - POST
+        // ─────────────────────────────────────────────────────────────
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult EntregarOrden(int idOrden)
+        public async Task<IActionResult> EntregarOrden(int idOrden)
         {
-            var orden = _db.Ordenes.Find(idOrden);
+            var (ok, error) = await _ordenService.EntregarOrdenAsync(idOrden);
 
-            if (orden == null)
+            if (!ok)
             {
-                return NotFound();
+                TempData["Error"] = error;
+                return RedirectToAction(nameof(Index));
             }
 
-            // Lógica de negocio:
-            // 1. Si debía algo, ahora lo paga todo.
-            if (orden.SaldoPendiente > 0)
-            {
-                decimal montoRestante = orden.SaldoPendiente;
-                orden.MontoPagado += montoRestante; // Sumamos lo que faltaba
-                orden.SaldoPendiente = 0; // La deuda queda en 0
-
-                // REGISTRAR EL PAGO EN LA NUEVA TABLA (EL CORAZÓN DEL REQUERIMIENTO)
-                var pagoFinal = new Pago
-                {
-                    OrdenID = orden.OrdenID,
-                    Monto = montoRestante,
-                    FechaPago = DateTime.Now,
-                    MetodoPago = "Efectivo",
-                    Notas = "Pago al momento de recoger la ropa"
-                };
-                _db.Pagos.Add(pagoFinal);
-            }
-
-            // 2. Actualizamos estados
-            orden.EstadoPago = "Pagado";
-            orden.Estado = "Entregado";
-
-            // 3. (Opcional) Actualizar estado de recojo si usas esa variable
-            orden.EstadoRecojo = "Recogido";
-
-            _db.SaveChanges();
-
-            TempData["Mensaje"] = $"✅ Orden #{idOrden} entregada y cobrada correctamente.";
-
-            var ordenParaImprimir = _db.Ordenes
-                .Include(o => o.Cliente)
-                .Include(o => o.Detalles)
-                .ThenInclude(d => d.Servicio)
-                .FirstOrDefault(o => o.OrdenID == idOrden);
-
-            if (ordenParaImprimir != null && !_ticketPrinter.TryPrintOrder(ordenParaImprimir, out var printError))
-            {
-                TempData["Error"] = $"La orden se finalizó, pero no se pudo imprimir el ticket. {(printError ?? "")}".Trim();
-            }
-
+            await ImprimirYNotificarAsync(idOrden, $"✅ Orden #{idOrden} entregada y cobrada correctamente.");
             return RedirectToAction(nameof(Index));
         }
 
+       
+        private async Task ImprimirYNotificarAsync(int ordenId, string mensajeExito)
+        {
+            string errorImpresion = string.Empty;
+            var orden = await _ordenService.ObtenerOrdenConDetallesAsync(ordenId);
 
+            if (orden != null)
+            {
+                var impreso = _printer.TryPrintOrder(orden, out errorImpresion);
 
+                if (impreso)
+                {
+                    TempData["Mensaje"] = mensajeExito;
+                    return;
+                }
+            }
 
+        }
 
+        private void CargarCategoriasEnViewBag()
+        {
+            var categorias = _db.Categorias.OrderBy(c => c.NombreCategoria).ToList();
+            ViewBag.Categorias = new SelectList(categorias, "CategoriaID", "NombreCategoria");
+        }
+
+        // ✅ CORREGIDO: parsers movidos a métodos estáticos privados
+        private static List<int> ParsearIntegers(string? valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return new List<int>();
+
+            return valor
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => int.TryParse(x.Trim(), out int r) ? r : 0)
+                .Where(x => x > 0)
+                .ToList();
+        }
+
+        private static List<decimal> ParsearDecimales(string? valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) return new List<decimal>();
+
+            return valor
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => decimal.TryParse(x.Trim(),
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out decimal r) ? r : 0)
+                .ToList();
+        }
     }
 }

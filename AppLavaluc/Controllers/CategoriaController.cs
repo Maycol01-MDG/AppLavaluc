@@ -1,7 +1,8 @@
 using AppLavaluc.Data;
 using AppLavaluc.Models;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AppLavaluc.Controllers
 {
@@ -9,88 +10,100 @@ namespace AppLavaluc.Controllers
     public class CategoriaController : Controller
     {
         private readonly LavanderiaContext _db;
+        private readonly ILogger<CategoriaController> _logger;
 
-        public CategoriaController(LavanderiaContext db)
+        public CategoriaController(LavanderiaContext db, ILogger<CategoriaController> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            IEnumerable<Categoria> lista = _db.Categorias;
+            var lista = await _db.Categorias.OrderBy(c => c.NombreCategoria).ToListAsync();
             return View(lista);
         }
 
-        public IActionResult Create()
-        {
-            return View();
-        }
+        public IActionResult Create() => View();
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Create(Categoria categoria)
+        public async Task<IActionResult> Create(Categoria categoria)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return View(categoria);
+
+            try
             {
                 _db.Categorias.Add(categoria);
-                _db.SaveChanges();
-                return RedirectToAction("Index");
+                await _db.SaveChangesAsync();
+                TempData["Mensaje"] = "✅ Categoría creada correctamente.";
+                return RedirectToAction(nameof(Index));
             }
-            return View(categoria);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear categoría");
+                TempData["Error"] = "Error al guardar la categoría.";
+                return View(categoria);
+            }
         }
-        // GET: /Categoria/Editar/5
-        public IActionResult Editar(int? id)
+
+        public async Task<IActionResult> Editar(int? id)
         {
-            if (id == null || id == 0)
-                return NotFound();
-
-            var categoria = _db.Categorias.Find(id);
-            if (categoria == null)
-                return NotFound();
-
+            if (id == null) return NotFound();
+            var categoria = await _db.Categorias.FindAsync(id);
+            if (categoria == null) return NotFound();
             return View(categoria);
         }
 
-        // POST: /Categoria/Editar
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Editar(Categoria categoria)
+        public async Task<IActionResult> Editar(Categoria categoria)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return View(categoria);
+
+            try
             {
                 _db.Categorias.Update(categoria);
-                _db.SaveChanges();
-                return RedirectToAction("Index");
+                await _db.SaveChangesAsync();
+                TempData["Mensaje"] = "✅ Categoría actualizada correctamente.";
+                return RedirectToAction(nameof(Index));
             }
-            return View(categoria);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar categoría {Id}", categoria.CategoriaID);
+                TempData["Error"] = "Error al actualizar la categoría.";
+                return View(categoria);
+            }
         }
-        // GET: /Categoria/Eliminar/5
-        public IActionResult Eliminar(int? id)
+
+        public async Task<IActionResult> Eliminar(int? id)
         {
-            if (id == null || id == 0)
-                return NotFound();
-
-            var categoria = _db.Categorias.Find(id);
-            if (categoria == null)
-                return NotFound();
-
+            if (id == null) return NotFound();
+            var categoria = await _db.Categorias.FindAsync(id);
+            if (categoria == null) return NotFound();
             return View(categoria);
         }
 
-        // POST: /Categoria/EliminarConfirmado
         [HttpPost, ActionName("Eliminar")]
         [ValidateAntiForgeryToken]
-        public IActionResult EliminarConfirmado(int id)
+        public async Task<IActionResult> EliminarConfirmado(int id)
         {
-            var categoria = _db.Categorias.Find(id);
-            if (categoria == null)
-                return NotFound();
+            try
+            {
+                var categoria = await _db.Categorias.FindAsync(id);
+                if (categoria == null) return NotFound();
 
-            _db.Categorias.Remove(categoria);
-            _db.SaveChanges();
-            return RedirectToAction("Index");
+                _db.Categorias.Remove(categoria);
+                await _db.SaveChangesAsync();
+                TempData["Mensaje"] = "✅ Categoría eliminada correctamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar categoría {Id}", id);
+                TempData["Error"] = "No se pudo eliminar la categoría. Puede tener servicios asociados.";
+                return RedirectToAction(nameof(Index));
+            }
         }
-
-
     }
 }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AppLavaluc.Migrations
 {
     [DbContext(typeof(LavanderiaContext))]
-    [Migration("20260331012027_Inicial")]
+    [Migration("20260403211658_Inicial")]
     partial class Inicial
     {
         /// <inheritdoc />
@@ -51,17 +51,21 @@ namespace AppLavaluc.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("ClienteID"));
 
                     b.Property<string>("Apellidos")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("Email")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("Telefono")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
 
                     b.HasKey("ClienteID");
 
@@ -120,11 +124,13 @@ namespace AppLavaluc.Migrations
 
                     b.Property<string>("EstadoPago")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<string>("EstadoRecojo")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<DateTime?>("FechaEntregaEstimada")
                         .HasColumnType("datetime(6)");
@@ -133,7 +139,8 @@ namespace AppLavaluc.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<decimal>("MontoPagado")
-                        .HasColumnType("decimal(65,30)");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("MontoTotal")
                         .HasPrecision(10, 2)
@@ -144,10 +151,12 @@ namespace AppLavaluc.Migrations
                         .HasColumnType("varchar(500)");
 
                     b.Property<decimal>("SaldoPendiente")
-                        .HasColumnType("decimal(65,30)");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("Telefono")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<string>("TipoEntrega")
                         .HasMaxLength(30)

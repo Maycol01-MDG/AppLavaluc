@@ -1,4 +1,4 @@
-﻿@model IEnumerable<AppLavaluc.Models.Orden>
+@model IEnumerable<AppLavaluc.Models.Orden>
 @{
     ViewData["Title"] = "Órdenes";
 }
@@ -10,6 +10,19 @@
             <i class="bi bi-plus-circle"></i> Nueva Orden
         </a>
     </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-success shadow-sm" role="alert">
+            @TempData["Mensaje"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger shadow-sm" role="alert">
+            @TempData["Error"]
+        </div>
+    }
 
     <div class="card shadow border-0">
         <div class="card-body p-0">

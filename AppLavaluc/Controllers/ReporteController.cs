@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using AppLavaluc.Data;
 using AppLavaluc.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AppLavaluc.Controllers
 {
@@ -10,89 +10,20 @@ namespace AppLavaluc.Controllers
     public class ReporteController : Controller
     {
         private readonly LavanderiaContext _context;
+        private readonly ILogger<ReporteController> _logger;
 
-        public ReporteController(LavanderiaContext context)
+        public ReporteController(LavanderiaContext context, ILogger<ReporteController> logger)
         {
             _context = context;
-        }
-
-        private async Task<Reporte> ConstruirReporteAsync(string tipo, DateTime? fechaInicio, DateTime? fechaFin)
-        {
-            // 1. Configurar rango de fechas
-            DateTime inicio = DateTime.Today;
-            DateTime fin = DateTime.Today.AddDays(1).AddTicks(-1); // Final del día
-
-            switch (tipo)
-            {
-                case "Hoy":
-                    inicio = DateTime.Today;
-                    fin = DateTime.Today.AddDays(1).AddTicks(-1);
-                    break;
-                case "Semana": // Lunes a Domingo actual
-                    int diff = (7 + (DateTime.Today.DayOfWeek - DayOfWeek.Monday)) % 7;
-                    inicio = DateTime.Today.AddDays(-1 * diff).Date;
-                    fin = inicio.AddDays(7).AddTicks(-1);
-                    break;
-                case "Quincena":
-                    if (DateTime.Today.Day <= 15)
-                    {
-                        inicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                        fin = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 15, 23, 59, 59);
-                    }
-                    else
-                    {
-                        inicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 16);
-                        fin = new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month), 23, 59, 59);
-                    }
-                    break;
-                case "Mes":
-                    inicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                    fin = new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month), 23, 59, 59);
-                    break;
-                case "Personalizado":
-                    if (fechaInicio.HasValue && fechaFin.HasValue)
-                    {
-                        inicio = fechaInicio.Value;
-                        fin = fechaFin.Value.Date.AddDays(1).AddTicks(-1);
-                    }
-                    break;
-            }
-
-            // 2. Consultar Base de Datos - Órdenes recibidas en este periodo
-            var ordenes = await _context.Ordenes
-                .Include(o => o.Cliente)
-                .Where(o => o.FechaRecepcion >= inicio && o.FechaRecepcion <= fin)
-                .OrderByDescending(o => o.OrdenID)
-                .AsNoTracking()
-                .ToListAsync();
-
-            // 3. Consultar Base de Datos - Pagos realizados en este periodo (EL CORAZÓN DEL REQUERIMIENTO)
-            var pagos = await _context.Pagos
-                .Include(p => p.Orden)
-                    .ThenInclude(o => o.Cliente)
-                .Where(p => p.FechaPago >= inicio && p.FechaPago <= fin)
-                .OrderByDescending(p => p.FechaPago)
-                .AsNoTracking()
-                .ToListAsync();
-
-            // 4. Construir el ViewModel
-            return new Reporte
-            {
-                FechaInicio = inicio,
-                FechaFin = fin,
-                TipoFiltro = tipo,
-                Detalles = ordenes,
-                PagosDetalle = pagos, // Agregamos el detalle de pagos
-                CantidadOrdenes = ordenes.Count,
-                // Cálculos matemáticos
-                TotalVentas = ordenes.Sum(x => x.MontoTotal), // Lo que se recibió para lavar
-                TotalRecaudado = pagos.Sum(x => x.Monto),     // Lo que REALMENTE entró a caja
-                TotalDeuda = _context.Ordenes.Sum(x => x.SaldoPendiente) // Deuda total histórica (opcional: podrías filtrar por las de este periodo)
-            };
+            _logger = logger;
         }
 
         // GET: Reporte/Index
-        public async Task<IActionResult> Index(string tipo = "Hoy", DateTime? fechaInicio = null, DateTime? fechaFin = null, bool print = false)
+        public async Task<IActionResult> Index(
+            string tipo = "Hoy",
+            DateTime? fechaInicio = null,
+            DateTime? fechaFin = null,
+            bool print = false)
         {
             ViewData["IsPrint"] = print;
             var reporte = await ConstruirReporteAsync(tipo, fechaInicio, fechaFin);
@@ -100,12 +31,94 @@ namespace AppLavaluc.Controllers
         }
 
         // GET: Reporte/Imprimir
-        // Vista simplificada para impresión (sin menús ni botones)
         public async Task<IActionResult> Imprimir(string tipo, DateTime fechaInicio, DateTime fechaFin)
         {
             ViewData["IsPrint"] = true;
             var reporte = await ConstruirReporteAsync(tipo, fechaInicio, fechaFin);
             return View("Index", reporte);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // MÉTODO PRIVADO: Construir reporte
+        // ─────────────────────────────────────────────────────────────
+        private async Task<Reporte> ConstruirReporteAsync(
+            string tipo,
+            DateTime? fechaInicio,
+            DateTime? fechaFin)
+        {
+            var (inicio, fin) = ObtenerRangoFechas(tipo, fechaInicio, fechaFin);
+
+            // Órdenes recibidas en el periodo
+            var ordenes = await _context.Ordenes
+                .Include(o => o.Cliente)
+                .Where(o => o.FechaRecepcion >= inicio && o.FechaRecepcion <= fin)
+                .OrderByDescending(o => o.OrdenID)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Pagos realizados en el periodo
+            var pagos = await _context.Pagos
+                .Include(p => p.Orden)
+                    .ThenInclude(o => o!.Cliente)
+                .Where(p => p.FechaPago >= inicio && p.FechaPago <= fin)
+                .OrderByDescending(p => p.FechaPago)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // ✅ CORREGIDO: TotalDeuda ahora es la deuda de las órdenes DEL PERIODO,
+            // no de toda la historia. Esto hace el reporte coherente con el filtro aplicado.
+            decimal totalDeuda = ordenes.Sum(o => o.SaldoPendiente);
+
+            return new Reporte
+            {
+                FechaInicio = inicio,
+                FechaFin = fin,
+                TipoFiltro = tipo,
+                Detalles = ordenes,
+                PagosDetalle = pagos,
+                CantidadOrdenes = ordenes.Count,
+                TotalVentas = ordenes.Sum(o => o.MontoTotal),
+                TotalRecaudado = pagos.Sum(p => p.Monto),
+                TotalDeuda = totalDeuda
+            };
+        }
+
+        // ✅ CORREGIDO: lógica de fechas extraída a método propio, sin repetición
+        private static (DateTime Inicio, DateTime Fin) ObtenerRangoFechas(
+            string tipo,
+            DateTime? fechaInicio,
+            DateTime? fechaFin)
+        {
+            var hoy = DateTime.Today;
+
+            return tipo switch
+            {
+                "Hoy" => (hoy, hoy.AddDays(1).AddTicks(-1)),
+
+                "Semana" => (
+                    hoy.AddDays(-((int)hoy.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7),
+                    hoy.AddDays(-((int)hoy.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7).AddDays(7).AddTicks(-1)
+                ),
+
+                "Quincena" => hoy.Day <= 15
+                    ? (new DateTime(hoy.Year, hoy.Month, 1),
+                       new DateTime(hoy.Year, hoy.Month, 15, 23, 59, 59))
+                    : (new DateTime(hoy.Year, hoy.Month, 16),
+                       new DateTime(hoy.Year, hoy.Month, DateTime.DaysInMonth(hoy.Year, hoy.Month), 23, 59, 59)),
+
+                "Mes" => (
+                    new DateTime(hoy.Year, hoy.Month, 1),
+                    new DateTime(hoy.Year, hoy.Month, DateTime.DaysInMonth(hoy.Year, hoy.Month), 23, 59, 59)
+                ),
+
+                "Personalizado" when fechaInicio.HasValue && fechaFin.HasValue => (
+                    fechaInicio.Value.Date,
+                    fechaFin.Value.Date.AddDays(1).AddTicks(-1)
+                ),
+
+                // Por defecto: hoy
+                _ => (hoy, hoy.AddDays(1).AddTicks(-1))
+            };
         }
     }
 }

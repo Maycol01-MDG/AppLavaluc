@@ -1,83 +1,92 @@
 using AppLavaluc.Data;
-using AppLavaluc.Models;
 using AppLavaluc.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace AppLavaluc.Controllers
 {
     public class CuentaController : Controller
     {
         private readonly LavanderiaContext _context;
+        private readonly ILogger<CuentaController> _logger;
 
-        public CuentaController(LavanderiaContext context)
+        public CuentaController(LavanderiaContext context, ILogger<CuentaController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
-        // GET: /Cuenta/Login
         [HttpGet]
         public IActionResult Login()
         {
+            // Si ya está autenticado, redirigir al inicio
+            if (User.Identity?.IsAuthenticated == true)
+                return RedirectToAction("Index", "Home");
+
             return View();
         }
 
-        // POST: /Cuenta/Login
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string username, string password)
         {
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
                 TempData["Error"] = "Usuario y contraseña son obligatorios.";
                 return View();
             }
 
-            var credential = username.Trim();
-            var user = _context.Usuarios.FirstOrDefault(u =>
-                u.NombreUsuario.ToLower() == credential.ToLower() ||
-                u.Email.ToLower() == credential.ToLower());
+            var credencial = username.Trim().ToLower();
 
-            if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !PasswordHelper.VerifyPassword(password, user.PasswordHash))
+            // ✅ Búsqueda normalizada insensible a mayúsculas
+            var usuario = _context.Usuarios.FirstOrDefault(u =>
+                u.NombreUsuario.ToLower() == credencial ||
+                u.Email.ToLower() == credencial);
+
+            // Verificar credenciales
+            if (usuario == null ||
+                string.IsNullOrEmpty(usuario.PasswordHash) ||
+                !PasswordHelper.VerifyPassword(password, usuario.PasswordHash))
             {
+                _logger.LogWarning("Intento de login fallido para usuario: {Username}", username);
                 TempData["Error"] = "Usuario/correo o contraseña incorrectos.";
                 return View();
             }
 
-            if (!user.Activo)
+            if (!usuario.Activo)
             {
                 TempData["Error"] = "Tu cuenta está desactivada. Contacta al administrador.";
                 return View();
             }
 
-            // Si pasa todas las pruebas, inicia sesión
             var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, user.NombreUsuario),
-        new Claim(ClaimTypes.NameIdentifier, user.UsuarioID.ToString()),
-        new Claim(ClaimTypes.Role, user.Rol)
-    };
+            {
+                new Claim(ClaimTypes.Name,           usuario.NombreUsuario),
+                new Claim(ClaimTypes.NameIdentifier, usuario.UsuarioID.ToString()),
+                new Claim(ClaimTypes.Role,           usuario.Rol)
+            };
 
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+            var properties = new AuthenticationProperties { IsPersistent = true };
 
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(claimsIdentity),
-                new AuthenticationProperties { IsPersistent = true });
+                principal,
+                properties);
 
+            _logger.LogInformation("Login exitoso para usuario: {Username}", usuario.NombreUsuario);
             return RedirectToAction("Index", "Home");
         }
 
-        // POST: /Cuenta/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("Login", "Cuenta");
+            return RedirectToAction(nameof(Login));
         }
     }
 }

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -41,20 +39,26 @@ namespace AppLavaluc.Models
 
         [Phone(ErrorMessage = "Ingrese un teléfono válido")]
         [Display(Name = "Teléfono de Contacto")]
+        [StringLength(20)]
         public string? Telefono { get; set; }
 
         [Display(Name = "Observaciones")]
         [StringLength(500)]
         public string? Observaciones { get; set; }
 
+        [Precision(10, 2)]
         public decimal MontoPagado { get; set; }
-        public decimal SaldoPendiente { get; set; }
 
-        public string EstadoPago { get; set; } // Pendiente | Parcial | Pagado
-        public string EstadoRecojo { get; set; } // Pendiente | Recogido
+        [Precision(10, 2)]
+        public decimal SaldoPendiente { get; set; }
+     
+        [StringLength(20)]
+        public string EstadoPago { get; set; } = "Pendiente"; // Pendiente | Parcial | Pagado
+
+        [StringLength(20)]
+        public string EstadoRecojo { get; set; } = "Pendiente"; // Pendiente | Recogido
 
         public ICollection<Pago>? Pagos { get; set; }
-
         public ICollection<DetalleOrden>? Detalles { get; set; }
 
         [NotMapped]
