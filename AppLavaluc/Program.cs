@@ -10,8 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 // ─────────────────────────────────────────────────────────────
 
 // Base de datos MySQL con Pomelo
+var connectionStringName = builder.Environment.IsDevelopment()
+    ? "LavalucContextLocal"
+    : "LavalucContext";
+
 builder.Services.AddDbContext<LavanderiaContext>(options =>
     options.UseMySql(
+        builder.Configuration.GetConnectionString(connectionStringName) ??
         builder.Configuration.GetConnectionString("LavalucContext"),
         new MySqlServerVersion(new Version(8, 0, 40)),
         mySqlOptions => mySqlOptions.EnableRetryOnFailure(
@@ -73,7 +78,11 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<LavanderiaContext>();
-        context.Database.Migrate();
+        var migrateOnStartup = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:MigrateOnStartup");
+        if (migrateOnStartup)
+        {
+            context.Database.Migrate();
+        }
 
         bool adminExiste = context.Usuarios.Any(u =>
             u.Email.ToLower() == "admin@lavaluc.com" ||
