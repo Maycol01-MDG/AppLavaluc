@@ -45,6 +45,10 @@ namespace AppLavaluc.Services
         public static bool TryGetDefaultPrinterName(out string? printerName)
         {
             printerName = null;
+            if (!OperatingSystem.IsWindows())
+            {
+                return false;
+            }
             try
             {
                 var required = 0;
@@ -79,6 +83,11 @@ namespace AppLavaluc.Services
         public static bool TrySendBytes(string printerName, byte[] bytes, out string? error)
         {
             error = null;
+            if (!OperatingSystem.IsWindows())
+            {
+                error = "La impresión directa (ESC/POS RAW) solo está soportada en Windows.";
+                return false;
+            }
             IntPtr hPrinter = IntPtr.Zero;
             IntPtr pUnmanagedBytes = IntPtr.Zero;
 
