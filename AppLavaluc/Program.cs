@@ -14,11 +14,41 @@ var connectionStringName = builder.Environment.IsDevelopment()
     ? "LavalucContextLocal"
     : "LavalucContext";
 
-var connectionString = builder.Configuration.GetConnectionString(connectionStringName) ??
-    builder.Configuration.GetConnectionString("LavalucContext");
+bool IsUsableConnectionString(string? value) =>
+    !string.IsNullOrWhiteSpace(value) &&
+    !value.Contains("CHANGE_ME", StringComparison.OrdinalIgnoreCase);
 
-if (string.IsNullOrWhiteSpace(connectionString))
-    throw new InvalidOperationException($"No se encontró la cadena de conexión '{connectionStringName}' ni 'LavalucContext'.");
+string? ResolveConnectionString()
+{
+    var configCandidates = builder.Environment.IsDevelopment()
+        ? new[] { "LavalucContextLocal", "LavalucContext" }
+        : new[] { "LavalucContext", "LavalucContextLocal" };
+
+    foreach (var key in configCandidates)
+    {
+        var candidate = builder.Configuration.GetConnectionString(key);
+        if (IsUsableConnectionString(candidate))
+            return candidate;
+    }
+
+    var envCandidates = builder.Environment.IsDevelopment()
+        ? new[] { "ConnectionStrings__LavalucContextLocal", "LAVALUC_CONTEXT_LOCAL", "MYSQLCONNSTR_LavalucContextLocal", "MYSQLCONNSTR_LavalucContext" }
+        : new[] { "ConnectionStrings__LavalucContext", "LAVALUC_CONTEXT", "MYSQLCONNSTR_LavalucContext", "MYSQLCONNSTR_LavalucContextLocal" };
+
+    foreach (var key in envCandidates)
+    {
+        var candidate = Environment.GetEnvironmentVariable(key);
+        if (IsUsableConnectionString(candidate))
+            return candidate;
+    }
+
+    return null;
+}
+
+var connectionString = ResolveConnectionString();
+
+if (!IsUsableConnectionString(connectionString))
+    throw new InvalidOperationException($"No se encontró una cadena de conexión válida para '{connectionStringName}'. Configura ConnectionStrings o una variable de entorno.");
 
 builder.Services.AddDbContext<LavanderiaContext>(options =>
     options.UseMySql(
