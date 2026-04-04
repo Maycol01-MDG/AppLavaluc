@@ -309,7 +309,11 @@ namespace AppLavaluc.Controllers
                     return;
                 }
             }
-
+            TempData["Mensaje"] = mensajeExito;
+            if (!string.IsNullOrWhiteSpace(errorImpresion))
+            {
+                TempData["Error"] = $"No se pudo imprimir el ticket. {errorImpresion}".Trim();
+            }
         }
 
         private void CargarCategoriasEnViewBag()

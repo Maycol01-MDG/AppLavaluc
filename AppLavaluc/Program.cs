@@ -79,28 +79,31 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<LavanderiaContext>();
         var migrateOnStartup = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:MigrateOnStartup");
+        var seedOnStartup = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:SeedOnStartup");
+
         if (migrateOnStartup)
-        {
             context.Database.Migrate();
-        }
 
-        bool adminExiste = context.Usuarios.Any(u =>
-            u.Email.ToLower() == "admin@lavaluc.com" ||
-            u.NombreUsuario.ToLower() == "admin");
-
-        if (!adminExiste)
+        if (seedOnStartup)
         {
-            context.Usuarios.Add(new AppLavaluc.Models.Usuario
+            bool adminExiste = context.Usuarios.Any(u =>
+                u.Email.ToLower() == "admin@lavaluc.com" ||
+                u.NombreUsuario.ToLower() == "admin");
+
+            if (!adminExiste)
             {
-                NombreUsuario = "admin",
-                NombreCompleto = "Administrador",
-                Email = "admin@lavaluc.com",
-                PasswordHash = AppLavaluc.Services.PasswordHelper.HashPassword("123456"),
-                Rol = "Admin",
-                Activo = true
-            });
-            context.SaveChanges();
-            logger.LogInformation("Usuario administrador creado correctamente.");
+                context.Usuarios.Add(new AppLavaluc.Models.Usuario
+                {
+                    NombreUsuario = "admin",
+                    NombreCompleto = "Administrador",
+                    Email = "admin@lavaluc.com",
+                    PasswordHash = AppLavaluc.Services.PasswordHelper.HashPassword("123456"),
+                    Rol = "Admin",
+                    Activo = true
+                });
+                context.SaveChanges();
+                logger.LogInformation("Usuario administrador creado correctamente.");
+            }
         }
     }
     catch (Exception ex)
