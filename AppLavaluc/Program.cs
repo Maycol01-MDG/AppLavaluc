@@ -14,10 +14,15 @@ var connectionStringName = builder.Environment.IsDevelopment()
     ? "LavalucContextLocal"
     : "LavalucContext";
 
+var connectionString = builder.Configuration.GetConnectionString(connectionStringName) ??
+    builder.Configuration.GetConnectionString("LavalucContext");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException($"No se encontró la cadena de conexión '{connectionStringName}' ni 'LavalucContext'.");
+
 builder.Services.AddDbContext<LavanderiaContext>(options =>
     options.UseMySql(
-        builder.Configuration.GetConnectionString(connectionStringName) ??
-        builder.Configuration.GetConnectionString("LavalucContext"),
+        connectionString,
         new MySqlServerVersion(new Version(8, 0, 40)),
         mySqlOptions => mySqlOptions.EnableRetryOnFailure(
             maxRetryCount: 5,
