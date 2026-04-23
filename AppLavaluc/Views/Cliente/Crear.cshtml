@@ -1,4 +1,4 @@
-﻿@model AppLavaluc.Models.Cliente
+@model AppLavaluc.Models.Cliente
 @{
     ViewData["Title"] = "Crear Cliente";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -12,6 +12,14 @@
             <div class="card-body">
                 <form asp-action="Crear" method="post">
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label for="dniLookup" class="form-label fw-bold">DNI</label>
+                        <input id="dniLookup" class="form-control" maxlength="8" inputmode="numeric" placeholder="Ingresa DNI y presiona Enter" />
+                        <div class="form-text">Al presionar Enter se consultará RENIEC y se completarán nombre y apellidos.</div>
+                        <div id="dniLookupMessage" class="small mt-1"></div>
+                    </div>
+                    <input type="hidden" asp-for="Dni" id="Dni" />
 
                     <div class="mb-3">
                         <label asp-for="Nombre" class="form-label fw-bold"></label>
@@ -51,4 +59,49 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const dniInput = document.getElementById("dniLookup");
+            const nombreInput = document.getElementById("Nombre");
+            const apellidosInput = document.getElementById("Apellidos");
+            const message = document.getElementById("dniLookupMessage");
+            const endpoint = '@Url.Action("BuscarDni", "Cliente")';
+
+            const setMessage = (text, isError) => {
+                message.textContent = text;
+                message.className = isError ? "small mt-1 text-danger" : "small mt-1 text-success";
+            };
+
+            dniInput.addEventListener("keydown", async (event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+
+                const dni = dniInput.value.trim();
+                if (!/^\d{8}$/.test(dni)) {
+                    setMessage("El DNI debe tener 8 dígitos.", true);
+                    return;
+                }
+
+                setMessage("Consultando RENIEC...", false);
+                try {
+                    const response = await fetch(`${endpoint}?dni=${encodeURIComponent(dni)}`, {
+                        headers: { "Accept": "application/json" }
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        setMessage(data?.mensaje || "No se pudo consultar el DNI.", true);
+                        return;
+                    }
+
+                    nombreInput.value = data.nombre || "";
+                    apellidosInput.value = data.apellidos || "";
+                    document.getElementById("Dni").value = data.dni || dni;
+                    setMessage("Datos obtenidos correctamente.", false);
+                } catch {
+                    setMessage("Error de conexión al consultar RENIEC.", true);
+                }
+            });
+        })();
+    </script>
 }

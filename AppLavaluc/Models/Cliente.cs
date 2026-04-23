@@ -23,6 +23,12 @@ namespace AppLavaluc.Models
         [EmailAddress(ErrorMessage = "Ingrese un email válido")]
         [StringLength(150)]
         public string? Email { get; set; }
+
+        [StringLength(8)]
+        [RegularExpression(@"^\d{8}$", ErrorMessage = "El DNI debe tener 8 dígitos.")]
+        [Display(Name = "DNI")]
+        public string? Dni { get; set; }
+
         public string NombreCompleto =>
             string.IsNullOrWhiteSpace(Apellidos)
                 ? Nombre

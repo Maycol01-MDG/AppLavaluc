@@ -1,4 +1,4 @@
-﻿@model AppLavaluc.Models.Orden
+@model AppLavaluc.Models.Orden
 @{
     ViewData["Title"] = "Crear Orden";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -27,6 +27,12 @@
                         <h5 class="fw-bold text-dark"><i class="bi bi-person-lines-fill text-primary me-2"></i> Datos del Cliente</h5>
                     </div>
                     <div class="card-body px-4 pb-4">
+                        <div class="mb-3">
+                            <label class="form-label small text-uppercase fw-bold text-muted">DNI</label>
+                            <input type="text" id="dniCliente" name="dniCliente" class="form-control bg-light border-0" maxlength="8" inputmode="numeric" placeholder="Ingresa DNI y presiona Enter" />
+                            <div id="dniLookupMessageOrden" class="small mt-1"></div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label small text-uppercase fw-bold text-muted">Nombres</label>
                             <input type="text" id="nombreCliente" name="nombreCliente" class="form-control bg-light border-0" placeholder="Ej: Juan Perez" required />
@@ -279,6 +285,45 @@
 
     <script>
         let detalles = [];
+        const endpointBuscarDni = '@Url.Action("BuscarDni", "Cliente")';
+
+        const setDniMessageOrden = (text, isError) => {
+            const el = $("#dniLookupMessageOrden");
+            el.text(text);
+            el.removeClass("text-danger text-success");
+            el.addClass(isError ? "text-danger" : "text-success");
+        };
+
+        $("#dniCliente").on("keydown", async function (event) {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+
+            const dni = ($(this).val() || "").trim();
+            if (!/^\d{8}$/.test(dni)) {
+                setDniMessageOrden("El DNI debe tener 8 dígitos.", true);
+                return;
+            }
+
+            setDniMessageOrden("Consultando RENIEC...", false);
+
+            try {
+                const response = await fetch(`${endpointBuscarDni}?dni=${encodeURIComponent(dni)}`, {
+                    headers: { "Accept": "application/json" }
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    setDniMessageOrden(data?.mensaje || "No se pudo consultar el DNI.", true);
+                    return;
+                }
+
+                $("#nombreCliente").val(data.nombre || "");
+                $("#apellidosCliente").val(data.apellidos || "");
+                setDniMessageOrden("Datos del cliente completados correctamente.", false);
+            } catch {
+                setDniMessageOrden("Error de conexión al consultar RENIEC.", true);
+            }
+        });
 
         // 1. CARGAR SERVICIOS
         $("#selectCategoria").change(function () {

@@ -44,7 +44,7 @@ namespace AppLavaluc.Services
                     var telefono = req.TelefonoCliente?.Trim();
                     if (!string.IsNullOrWhiteSpace(telefono) && telefono.Length > 20) telefono = telefono[..20];
 
-                    var cliente = await ObtenerOCrearClienteAsync(nombre, apellidos, telefono);
+                    var cliente = await ObtenerOCrearClienteAsync(req.DniCliente, nombre, apellidos, telefono);
 
                     var observaciones = req.Observaciones?.Trim();
                     if (!string.IsNullOrEmpty(observaciones) && observaciones.Length > 500)
@@ -184,8 +184,27 @@ namespace AppLavaluc.Services
         // MÉTODOS PRIVADOS
         // ─────────────────────────────────────────────────────────────
 
-        private async Task<Cliente> ObtenerOCrearClienteAsync(string nombre, string apellidos, string? telefono)
+        private async Task<Cliente> ObtenerOCrearClienteAsync(string? dni, string nombre, string apellidos, string? telefono)
         {
+            var dniNormalizado = string.IsNullOrWhiteSpace(dni) ? null : new string(dni.Where(char.IsDigit).ToArray());
+            if (!string.IsNullOrWhiteSpace(dniNormalizado) && dniNormalizado.Length == 8)
+            {
+                var clientePorDni = await _db.Clientes.FirstOrDefaultAsync(c => c.Dni == dniNormalizado);
+                if (clientePorDni != null)
+                {
+                    if (string.IsNullOrWhiteSpace(clientePorDni.Telefono) && !string.IsNullOrWhiteSpace(telefono))
+                        clientePorDni.Telefono = telefono;
+
+                    if (string.IsNullOrWhiteSpace(clientePorDni.Nombre) && !string.IsNullOrWhiteSpace(nombre))
+                        clientePorDni.Nombre = nombre;
+
+                    if (string.IsNullOrWhiteSpace(clientePorDni.Apellidos) && !string.IsNullOrWhiteSpace(apellidos))
+                        clientePorDni.Apellidos = apellidos;
+
+                    return clientePorDni;
+                }
+            }
+
             // ✅ CORREGIDO: búsqueda insensible a mayúsculas para evitar duplicados
             var nombreNorm = nombre.ToLower();
             var apellidosNorm = apellidos.ToLower();
@@ -195,10 +214,16 @@ namespace AppLavaluc.Services
                 (c.Apellidos == null ? "" : c.Apellidos.ToLower()) == apellidosNorm);
 
             if (clienteExistente != null)
+            {
+                if (string.IsNullOrWhiteSpace(clienteExistente.Dni) && !string.IsNullOrWhiteSpace(dniNormalizado))
+                    clienteExistente.Dni = dniNormalizado;
+
                 return clienteExistente;
+            }
 
             var nuevoCliente = new Cliente
             {
+                Dni = dniNormalizado,
                 Nombre = nombre,
                 Apellidos = apellidos,
                 Telefono = telefono

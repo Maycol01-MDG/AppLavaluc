@@ -89,6 +89,7 @@ namespace AppLavaluc.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Crear(
+            string? dniCliente,
             string nombreCliente,
             string apellidosCliente,
             string? telefonoCliente,
@@ -114,6 +115,7 @@ namespace AppLavaluc.Controllers
             {
                 NombreCliente = nombreCliente,
                 ApellidosCliente = apellidosCliente,
+                DniCliente = dniCliente,
                 TelefonoCliente = telefonoCliente,
                 TipoEntrega = tipoEntrega,
                 MontoPagado = montoPagado,

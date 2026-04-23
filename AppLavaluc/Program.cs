@@ -62,6 +62,7 @@ builder.Services.AddDbContext<LavanderiaContext>(options =>
 );
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();
 
 // ✅ Impresora térmica: Singleton porque es un recurso de hardware compartido
 builder.Services.AddSingleton<EscPosTicketPrinter>();
@@ -113,6 +114,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<LavanderiaContext>();
+        context.Database.ExecuteSqlRaw("ALTER TABLE `Clientes` ADD COLUMN IF NOT EXISTS `Dni` varchar(8) NULL;");
         var migrateOnStartup = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:MigrateOnStartup");
         var seedOnStartup = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:SeedOnStartup");
 

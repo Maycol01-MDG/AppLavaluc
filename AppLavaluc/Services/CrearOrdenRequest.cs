@@ -1,4 +1,4 @@
-﻿namespace AppLavaluc.Services
+namespace AppLavaluc.Services
 {
     /// <summary>
     /// Objeto de transferencia para crear una orden.
@@ -6,6 +6,7 @@
     /// </summary>
     public class CrearOrdenRequest
     {
+        public string? DniCliente { get; set; }
         public string NombreCliente { get; set; } = string.Empty;
         public string ApellidosCliente { get; set; } = string.Empty;
         public string? TelefonoCliente { get; set; }

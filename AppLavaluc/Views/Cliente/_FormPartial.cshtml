@@ -1,4 +1,4 @@
-﻿@model AppLavaluc.Models.Cliente
+@model AppLavaluc.Models.Cliente
 
 <div class="row justify-content-center">
     <div class="col-md-6">
@@ -15,6 +15,12 @@
                     <label asp-for="Apellidos" class="form-label fw-bold"></label>
                     <input asp-for="Apellidos" class="form-control" placeholder="Ejemplo: Pérez Diaz" />
                     <span asp-validation-for="Apellidos" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Dni" class="form-label fw-bold"></label>
+                    <input asp-for="Dni" class="form-control" maxlength="8" placeholder="Ejemplo: 45663043" />
+                    <span asp-validation-for="Dni" class="text-danger"></span>
                 </div>
 
                 <div class="mb-3">
