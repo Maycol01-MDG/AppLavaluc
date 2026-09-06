@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace AppLavaluc.Models
 {
@@ -24,10 +24,14 @@ namespace AppLavaluc.Models
         [StringLength(150)]
         public string? Email { get; set; }
 
-        [StringLength(8)]
-        [RegularExpression(@"^\d{8}$", ErrorMessage = "El DNI debe tener 8 dígitos.")]
-        [Display(Name = "DNI")]
+        [StringLength(11)]
+        [RegularExpression(@"^(\d{8}|\d{11})$", ErrorMessage = "El documento debe ser DNI (8 dígitos) o RUC (11 dígitos).")]
+        [Display(Name = "DNI / RUC")]
         public string? Dni { get; set; }
+
+        [StringLength(250)]
+        [Display(Name = "Dirección")]
+        public string? Direccion { get; set; }
 
         public string NombreCompleto =>
             string.IsNullOrWhiteSpace(Apellidos)

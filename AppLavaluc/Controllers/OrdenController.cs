@@ -13,17 +13,20 @@ namespace AppLavaluc.Controllers
     {
         private readonly LavanderiaContext _db;
         private readonly IOrdenService _ordenService;
+        private readonly IFacturacionService _facturacionService;
         private readonly EscPosTicketPrinter _printer;
         private readonly ILogger<OrdenController> _logger;
 
         public OrdenController(
             LavanderiaContext db,
             IOrdenService ordenService,
+            IFacturacionService facturacionService,
             EscPosTicketPrinter printer,
             ILogger<OrdenController> logger)
         {
             _db = db;
             _ordenService = ordenService;
+            _facturacionService = facturacionService;
             _printer = printer;
             _logger = logger;
         }
@@ -35,7 +38,8 @@ namespace AppLavaluc.Controllers
         {
             var ordenes = await _db.Ordenes
                 .Include(o => o.Cliente)
-                .Include(o => o.Detalles)
+                .Include(o => o.Comprobantes)
+                .Include(o => o.Detalles!)
                     .ThenInclude(d => d.Servicio)
                 .OrderByDescending(o => o.OrdenID)
                 .AsNoTracking()
@@ -91,36 +95,55 @@ namespace AppLavaluc.Controllers
         public async Task<IActionResult> Crear(
             string? dniCliente,
             string nombreCliente,
-            string apellidosCliente,
+            string? apellidosCliente,
             string? telefonoCliente,
+            string? direccionCliente,
             string tipoEntrega,
             decimal montoPagado,
             DateTime? fechaEntregaEstimada,
             string? observaciones,
+            string? tipoComprobante,
+            bool emitirComprobante,
             [FromForm] string servicioIds,
             [FromForm] string cantidades,
             [FromForm] string descuentos)
         {
+            var docNorm = string.IsNullOrWhiteSpace(dniCliente) ? "" : new string(dniCliente.Where(char.IsDigit).ToArray());
+            bool esRuc = docNorm.Length == 11;
+
+            // Determinar tipo de comprobante ("01" = Factura, "03" = Boleta)
+            var tipoDocFinal = !string.IsNullOrWhiteSpace(tipoComprobante)
+                ? tipoComprobante.Trim()
+                : (esRuc ? "01" : "03");
+
             // Validaciones básicas
-            if (string.IsNullOrWhiteSpace(nombreCliente) ||
-                string.IsNullOrWhiteSpace(apellidosCliente) ||
-                string.IsNullOrWhiteSpace(tipoEntrega))
+            if (string.IsNullOrWhiteSpace(nombreCliente) || string.IsNullOrWhiteSpace(tipoEntrega))
             {
-                TempData["Error"] = "Nombre, apellidos y tipo de entrega son obligatorios.";
+                TempData["Error"] = esRuc
+                    ? "La Razón Social y el tipo de entrega son obligatorios."
+                    : "El nombre del cliente y el tipo de entrega son obligatorios.";
                 CargarCategoriasEnViewBag();
                 return RedirectToAction(nameof(Crear));
             }
 
+            if (!esRuc && string.IsNullOrWhiteSpace(apellidosCliente))
+            {
+                apellidosCliente = "-";
+            }
+
             var request = new CrearOrdenRequest
             {
-                NombreCliente = nombreCliente,
-                ApellidosCliente = apellidosCliente,
-                DniCliente = dniCliente,
-                TelefonoCliente = telefonoCliente,
-                TipoEntrega = tipoEntrega,
+                NombreCliente = nombreCliente.Trim(),
+                ApellidosCliente = (apellidosCliente ?? "").Trim(),
+                DniCliente = string.IsNullOrWhiteSpace(docNorm) ? null : docNorm,
+                TelefonoCliente = telefonoCliente?.Trim(),
+                DireccionCliente = direccionCliente?.Trim(),
+                TipoEntrega = tipoEntrega.Trim(),
                 MontoPagado = montoPagado,
                 FechaEntregaEstimada = fechaEntregaEstimada,
                 Observaciones = observaciones,
+                TipoComprobante = tipoDocFinal,
+                EmitirComprobante = emitirComprobante,
                 ServicioIds = ParsearIntegers(servicioIds),
                 Cantidades = ParsearIntegers(cantidades),
                 Descuentos = ParsearDecimales(descuentos)
@@ -134,7 +157,63 @@ namespace AppLavaluc.Controllers
                 return RedirectToAction(nameof(Crear));
             }
 
-            await ImprimirYNotificarAsync(ordenId, $"✅ Orden #{ordenId} creada correctamente.");
+            // Emisión automática del Comprobante Electrónico (Boleta o Factura) si está habilitado
+            string mensajeFactura = "";
+            if (emitirComprobante)
+            {
+                try
+                {
+                    var rznSocial = esRuc
+                        ? nombreCliente.Trim()
+                        : $"{nombreCliente} {apellidosCliente}".Trim();
+
+                    var emitirReq = new EmitirComprobanteRequest
+                    {
+                        OrdenId = ordenId,
+                        TipoDoc = tipoDocFinal,
+                        NumDocCliente = docNorm,
+                        RznSocialCliente = rznSocial,
+                        DireccionCliente = direccionCliente?.Trim()
+                    };
+
+                    var (okFac, comp, errorFac) = await _facturacionService.EmitirComprobanteAsync(emitirReq);
+                    if (okFac && comp != null)
+                    {
+                        var descTipo = tipoDocFinal == "01" ? "Factura Electrónica" : "Boleta de Venta";
+                        mensajeFactura = $" | 📄 {descTipo} {comp.NumeroCompleto} ({comp.EstadoSunat})";
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No se pudo emitir comprobante para orden {Id}: {Error}", ordenId, errorFac);
+                        TempData["Advertencia"] = $"Orden #{ordenId} registrada con éxito, pero la emisión electrónica arrojó: {errorFac}";
+                    }
+                }
+                catch (Exception exFac)
+                {
+                    _logger.LogError(exFac, "Error al emitir comprobante para orden {Id}", ordenId);
+                    TempData["Advertencia"] = $"Orden #{ordenId} registrada, pero ocurrió un problema al contactar la API de facturación.";
+                }
+            }
+
+            await ImprimirYNotificarAsync(ordenId, $"✅ Orden #{ordenId} creada correctamente.{mensajeFactura}");
+
+            bool esAjax = Request.Headers["Accept"].ToString().Contains("json") ||
+                          Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
+            string mensajeFinal = TempData["Mensaje"]?.ToString() ?? $"✅ Orden #{ordenId} creada correctamente.{mensajeFactura}";
+
+            if (esAjax)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    ordenId = ordenId,
+                    message = mensajeFinal,
+                    redirectUrl = Url.Action(nameof(Index))
+                });
+            }
+
+            // Redirigir a la Lista de Órdenes directamente
             return RedirectToAction(nameof(Index));
         }
 
@@ -147,7 +226,8 @@ namespace AppLavaluc.Controllers
 
             var orden = await _db.Ordenes
                 .Include(o => o.Cliente)
-                .Include(o => o.Detalles)
+                .Include(o => o.Comprobantes)
+                .Include(o => o.Detalles!)
                     .ThenInclude(d => d.Servicio)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(o => o.OrdenID == id);
@@ -166,7 +246,7 @@ namespace AppLavaluc.Controllers
 
             var orden = await _db.Ordenes
                 .Include(o => o.Cliente)
-                .Include(o => o.Detalles)
+                .Include(o => o.Detalles!)
                     .ThenInclude(d => d.Servicio)
                 .FirstOrDefaultAsync(o => o.OrdenID == id);
 
@@ -277,28 +357,41 @@ namespace AppLavaluc.Controllers
         }
 
         // ─────────────────────────────────────────────────────────────
-        // ENTREGAR ORDEN - POST
+        // ENTREGAR ORDEN (UNIFICADO: Cobro de saldo pendiente y Entrega)
         // ─────────────────────────────────────────────────────────────
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EntregarOrden(int idOrden)
+        public async Task<IActionResult> EntregarOrden(int idOrden, string? metodoPago = "Efectivo")
         {
-            var (ok, error) = await _ordenService.EntregarOrdenAsync(idOrden);
+            var (ok, error) = await _ordenService.EntregarOrdenAsync(idOrden, metodoPago ?? "Efectivo");
+
+            bool esAjax = Request.Headers["Accept"].ToString().Contains("json") ||
+                          Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
             if (!ok)
             {
+                if (esAjax)
+                {
+                    return BadRequest(new { success = false, message = error ?? "Error al procesar la entrega." });
+                }
                 TempData["Error"] = error;
                 return RedirectToAction(nameof(Index));
             }
 
-            await ImprimirYNotificarAsync(idOrden, $"✅ Orden #{idOrden} entregada y cobrada correctamente.");
+            string mensajeExito = $"✅ Orden #{idOrden} procesada y entregada correctamente.";
+            await ImprimirYNotificarAsync(idOrden, mensajeExito);
+
+            if (esAjax)
+            {
+                return Ok(new { success = true, message = mensajeExito, ordenId = idOrden });
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
-       
         private async Task ImprimirYNotificarAsync(int ordenId, string mensajeExito)
         {
-            string errorImpresion = string.Empty;
+            string? errorImpresion = null;
             var orden = await _ordenService.ObtenerOrdenConDetallesAsync(ordenId);
 
             if (orden != null)
@@ -307,14 +400,14 @@ namespace AppLavaluc.Controllers
 
                 if (impreso)
                 {
-                    TempData["Mensaje"] = mensajeExito;
+                    TempData["Mensaje"] = $"{mensajeExito} | 🖨️ Ticket emitido en ticketera.";
                     return;
                 }
             }
             TempData["Mensaje"] = mensajeExito;
             if (!string.IsNullOrWhiteSpace(errorImpresion))
             {
-                TempData["Error"] = $"No se pudo imprimir el ticket. {errorImpresion}".Trim();
+                TempData["Advertencia"] = $"Ticket físico no enviado: {errorImpresion}".Trim();
             }
         }
 

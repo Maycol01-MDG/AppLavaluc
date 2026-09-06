@@ -1,0 +1,36 @@
+﻿namespace AppLavaluc.wwwroot.css
+{
+    public class custom
+{
+    /* ---- Estilos personalizados para formularios ---- */
+    .card-header h4
+
+{
+    font-weight: 600;
+}
+
+.form-label {
+    color: #333;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border: none;
+}
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+.input-group-text {
+    background-color: #f1f1f1;
+    font-weight: bold;
+}
+
+/* Espaciado en formularios */
+form .mb-3 {
+    margin-bottom: 1.25rem !important;
+}
+
+    }
+}

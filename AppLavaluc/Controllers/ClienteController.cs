@@ -1,5 +1,6 @@
 using AppLavaluc.Data;
 using AppLavaluc.Models;
+using AppLavaluc.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,19 +13,16 @@ namespace AppLavaluc.Controllers
     {
         private readonly LavanderiaContext _db;
         private readonly ILogger<ClienteController> _logger;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
+        private readonly IConsultaDocumentoService _consultaDocumentoService;
 
         public ClienteController(
             LavanderiaContext db,
             ILogger<ClienteController> logger,
-            IHttpClientFactory httpClientFactory,
-            IConfiguration configuration)
+            IConsultaDocumentoService consultaDocumentoService)
         {
             _db = db;
             _logger = logger;
-            _httpClientFactory = httpClientFactory;
-            _configuration = configuration;
+            _consultaDocumentoService = consultaDocumentoService;
         }
 
         public async Task<IActionResult> Index()
@@ -128,80 +126,95 @@ namespace AppLavaluc.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> BuscarDocumento(string documento)
+        {
+            if (string.IsNullOrWhiteSpace(documento))
+                return BadRequest(new { mensaje = "Ingrese un número de documento." });
+
+            var doc = new string(documento.Where(char.IsDigit).ToArray());
+            if (doc.Length != 8 && doc.Length != 11)
+                return BadRequest(new { mensaje = "El documento debe ser un DNI de 8 dígitos o un RUC de 11 dígitos." });
+
+            var resp = await _consultaDocumentoService.ConsultarAsync(doc);
+
+            if (resp.Exito)
+            {
+                var tipoDoc = resp.Tipo == TipoDocumento.Ruc ? "01" : "03";
+                var tipoDocSunat = resp.Tipo == TipoDocumento.Ruc ? "6" : "1";
+
+                string mensajeExito;
+                if (resp.Origen == "local")
+                {
+                    mensajeExito = "Cliente frecuente cargado desde la base de datos local.";
+                }
+                else if (resp.Tipo == TipoDocumento.Ruc)
+                {
+                    var estadoTxt = !string.IsNullOrWhiteSpace(resp.Estado) ? $" ({resp.Estado} / {resp.Condicion ?? "HABIDO"})" : "";
+                    mensajeExito = $"✓ RUC verificado en SUNAT: {resp.NombreORazonSocial}{estadoTxt}";
+                }
+                else
+                {
+                    mensajeExito = "Datos obtenidos desde RENIEC.";
+                }
+
+                return Json(new
+                {
+                    encontrado = true,
+                    origen = resp.Origen,
+                    tipoDoc = tipoDoc,
+                    tipoDocSunat = tipoDocSunat,
+                    documento = doc,
+                    nombre = resp.NombreORazonSocial,
+                    apellidos = resp.Apellidos ?? "",
+                    nombreCompleto = !string.IsNullOrWhiteSpace(resp.Apellidos)
+                        ? $"{resp.NombreORazonSocial} {resp.Apellidos}".Trim()
+                        : resp.NombreORazonSocial,
+                    telefono = resp.Telefono ?? "",
+                    direccion = resp.Direccion ?? "",
+                    estado = resp.Estado ?? "",
+                    condicion = resp.Condicion ?? "",
+                    mensaje = mensajeExito
+                });
+            }
+
+            var fallbackTipoDoc = doc.Length == 11 ? "01" : "03";
+            var fallbackTipoDocSunat = doc.Length == 11 ? "6" : "1";
+
+            return Json(new
+            {
+                encontrado = false,
+                origen = "nuevo",
+                tipoDoc = fallbackTipoDoc,
+                tipoDocSunat = fallbackTipoDocSunat,
+                documento = doc,
+                mensaje = resp.MensajeError ?? (doc.Length == 11
+                    ? "RUC detectado. Ingrese la Razón Social y Dirección Fiscal para emitir Factura."
+                    : "DNI no registrado localmente. Ingrese nombres y apellidos para emitir Boleta.")
+            });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> BuscarDni(string dni)
         {
             if (string.IsNullOrWhiteSpace(dni) || dni.Length != 8 || !dni.All(char.IsDigit))
                 return BadRequest(new { mensaje = "El DNI debe tener 8 dígitos numéricos." });
 
-            var urlTemplate = _configuration["ReniecApi:UrlTemplate"] ?? Environment.GetEnvironmentVariable("RENIEC_API_URL_TEMPLATE");
-            var apiKey = _configuration["ReniecApi:ApiKey"] ?? Environment.GetEnvironmentVariable("RENIEC_API_KEY");
+            var resp = await _consultaDocumentoService.ConsultarAsync(dni);
+            if (!resp.Exito)
+                return NotFound(new { mensaje = resp.MensajeError ?? "No se encontró información para el DNI." });
 
-            if (string.IsNullOrWhiteSpace(urlTemplate) || !urlTemplate.Contains("{dni}", StringComparison.OrdinalIgnoreCase))
-                return StatusCode(500, new { mensaje = "Falta configurar ReniecApi:UrlTemplate con el marcador {dni}." });
-
-            if (string.IsNullOrWhiteSpace(apiKey) || apiKey.Contains("CHANGE_ME", StringComparison.OrdinalIgnoreCase))
-                return StatusCode(500, new { mensaje = "Falta configurar la API Key de RENIEC en el servidor." });
-
-            try
+            return Json(new
             {
-                var requestUrl = urlTemplate.Replace("{dni}", dni, StringComparison.OrdinalIgnoreCase);
-                var client = _httpClientFactory.CreateClient();
-                using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
-                request.Headers.Add("x-api-key", apiKey);
-
-                using var response = await client.SendAsync(request);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var detalle = await response.Content.ReadAsStringAsync();
-                    _logger.LogWarning("RENIEC respondió {StatusCode} para DNI {Dni}", response.StatusCode, dni);
-                    var mensaje = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment()
-                        ? $"RENIEC respondió {(int)response.StatusCode}. {detalle}"
-                        : "No se pudo consultar RENIEC en este momento.";
-                    return StatusCode((int)response.StatusCode, new { mensaje });
-                }
-
-                var json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                var nombreCompleto = root.TryGetProperty("nombreCompleto", out var nc)
-                    ? nc.GetString()
-                    : null;
-
-                if (string.IsNullOrWhiteSpace(nombreCompleto))
-                    return NotFound(new { mensaje = "No se encontró información para ese DNI." });
-
-                var (nombre, apellidos) = SepararNombreApellidos(nombreCompleto);
-                return Json(new
-                {
-                    dni,
-                    nombre,
-                    apellidos,
-                    nombreCompleto
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al consultar RENIEC para DNI {Dni}", dni);
-                return StatusCode(500, new { mensaje = "Error interno al consultar DNI." });
-            }
+                dni,
+                nombre = resp.NombreORazonSocial,
+                apellidos = resp.Apellidos ?? "",
+                nombreCompleto = !string.IsNullOrWhiteSpace(resp.Apellidos)
+                    ? $"{resp.NombreORazonSocial} {resp.Apellidos}".Trim()
+                    : resp.NombreORazonSocial,
+                telefono = resp.Telefono ?? "",
+                direccion = resp.Direccion ?? ""
+            });
         }
 
-        private static (string nombre, string apellidos) SepararNombreApellidos(string nombreCompleto)
-        {
-            var partes = nombreCompleto
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            if (partes.Length >= 3)
-            {
-                var apellidos = string.Join(' ', partes.TakeLast(2));
-                var nombre = string.Join(' ', partes.Take(partes.Length - 2));
-                return (nombre, apellidos);
-            }
-
-            if (partes.Length == 2)
-                return (partes[0], partes[1]);
-
-            return (nombreCompleto, string.Empty);
-        }
     }
 }

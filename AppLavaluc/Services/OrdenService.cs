@@ -44,7 +44,10 @@ namespace AppLavaluc.Services
                     var telefono = req.TelefonoCliente?.Trim();
                     if (!string.IsNullOrWhiteSpace(telefono) && telefono.Length > 20) telefono = telefono[..20];
 
-                    var cliente = await ObtenerOCrearClienteAsync(req.DniCliente, nombre, apellidos, telefono);
+                    var direccion = req.DireccionCliente?.Trim();
+                    if (!string.IsNullOrWhiteSpace(direccion) && direccion.Length > 250) direccion = direccion[..250];
+
+                    var cliente = await ObtenerOCrearClienteAsync(req.DniCliente, nombre, apellidos, telefono, direccion);
 
                     var observaciones = req.Observaciones?.Trim();
                     if (!string.IsNullOrEmpty(observaciones) && observaciones.Length > 500)
@@ -117,7 +120,7 @@ namespace AppLavaluc.Services
         // ─────────────────────────────────────────────────────────────
         // ENTREGAR ORDEN
         // ─────────────────────────────────────────────────────────────
-        public async Task<(bool Ok, string? Error)> EntregarOrdenAsync(int ordenId)
+        public async Task<(bool Ok, string? Error)> EntregarOrdenAsync(int ordenId, string metodoPago = "Efectivo")
         {
             var strategy = _db.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
@@ -141,8 +144,8 @@ namespace AppLavaluc.Services
                             OrdenID = orden.OrdenID,
                             Monto = montoRestante,
                             FechaPago = DateTime.Now,
-                            MetodoPago = "Efectivo",
-                            Notas = "Pago al momento de recoger la ropa"
+                            MetodoPago = string.IsNullOrWhiteSpace(metodoPago) ? "Efectivo" : metodoPago,
+                            Notas = "Cobro al momento de entregar la ropa"
                         });
 
                         orden.MontoPagado += montoRestante;
@@ -174,7 +177,8 @@ namespace AppLavaluc.Services
         {
             return await _db.Ordenes
                 .Include(o => o.Cliente)
-                .Include(o => o.Detalles)
+                .Include(o => o.Comprobantes)
+                .Include(o => o.Detalles!)
                     .ThenInclude(d => d.Servicio)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(o => o.OrdenID == ordenId);
@@ -184,10 +188,10 @@ namespace AppLavaluc.Services
         // MÉTODOS PRIVADOS
         // ─────────────────────────────────────────────────────────────
 
-        private async Task<Cliente> ObtenerOCrearClienteAsync(string? dni, string nombre, string apellidos, string? telefono)
+        private async Task<Cliente> ObtenerOCrearClienteAsync(string? dni, string nombre, string apellidos, string? telefono, string? direccion = null)
         {
             var dniNormalizado = string.IsNullOrWhiteSpace(dni) ? null : new string(dni.Where(char.IsDigit).ToArray());
-            if (!string.IsNullOrWhiteSpace(dniNormalizado) && dniNormalizado.Length == 8)
+            if (!string.IsNullOrWhiteSpace(dniNormalizado) && (dniNormalizado.Length == 8 || dniNormalizado.Length == 11))
             {
                 var clientePorDni = await _db.Clientes.FirstOrDefaultAsync(c => c.Dni == dniNormalizado);
                 if (clientePorDni != null)
@@ -200,6 +204,9 @@ namespace AppLavaluc.Services
 
                     if (string.IsNullOrWhiteSpace(clientePorDni.Apellidos) && !string.IsNullOrWhiteSpace(apellidos))
                         clientePorDni.Apellidos = apellidos;
+
+                    if (!string.IsNullOrWhiteSpace(direccion))
+                        clientePorDni.Direccion = direccion;
 
                     return clientePorDni;
                 }
@@ -218,6 +225,9 @@ namespace AppLavaluc.Services
                 if (string.IsNullOrWhiteSpace(clienteExistente.Dni) && !string.IsNullOrWhiteSpace(dniNormalizado))
                     clienteExistente.Dni = dniNormalizado;
 
+                if (!string.IsNullOrWhiteSpace(direccion) && string.IsNullOrWhiteSpace(clienteExistente.Direccion))
+                    clienteExistente.Direccion = direccion;
+
                 return clienteExistente;
             }
 
@@ -226,7 +236,8 @@ namespace AppLavaluc.Services
                 Dni = dniNormalizado,
                 Nombre = nombre,
                 Apellidos = apellidos,
-                Telefono = telefono
+                Telefono = telefono,
+                Direccion = direccion
             };
 
             _db.Clientes.Add(nuevoCliente);

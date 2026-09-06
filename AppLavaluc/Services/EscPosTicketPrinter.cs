@@ -20,7 +20,7 @@ namespace AppLavaluc.Services
             _configuredPrinterName = (configuration["ThermalPrinter:Name"] ?? "").Trim();
             if (!int.TryParse(configuration["ThermalPrinter:Copies"], out _copies) || _copies < 1)
             {
-                _copies = 2;
+                _copies = 1;
             }
 
             var selected = _configuredPrinterName;
@@ -31,7 +31,7 @@ namespace AppLavaluc.Services
 
             if (string.IsNullOrWhiteSpace(selected))
             {
-                selected = "XP-80T";
+                selected = "XP-80";
             }
 
             _primaryPrinterName = selected;
@@ -105,31 +105,77 @@ namespace AppLavaluc.Services
             Add(0x1B, 0x40);
             Add(0x1B, 0x74, 0x02);
 
+            var comp = orden.Comprobantes?.OrderByDescending(c => c.ComprobanteID).FirstOrDefault(c => c.EstadoSunat == "Aceptado")
+                     ?? orden.Comprobantes?.OrderByDescending(c => c.ComprobanteID).FirstOrDefault();
+            var esFactura = (comp != null && comp.TipoDoc == "01") || (orden.Cliente?.Dni?.Length == 11);
+
             Add(0x1B, 0x61, 0x01);
             Add(0x1B, 0x45, 0x01);
             AddLine(copyLabel);
             AddLine("APP LAVALUC");
             Add(0x1B, 0x45, 0x00);
-            AddLine("Av. Principal 123, Centro");
-            AddLine("Tel: (01) 999-999-999");
-            AddLine("RUC: 10123456789");
+            AddLine(comp?.RazonSocialEmisor ?? "MONDRAGON DELGADO MAYCOL");
+            AddLine($"RUC: {comp?.RucEmisor ?? "10708464100"}");
+            AddLine("Av. Villa Nueva 221 - Lima");
+            AddLine("Tel: (+51) 913-474-275");
 
             AddLine(new string('-', lineWidth));
 
             Add(0x1B, 0x61, 0x00);
             var ordenNum = orden.OrdenID.ToString("D6", CultureInfo.InvariantCulture);
-            var fecha = orden.FechaRecepcion.ToString("dd/MM/yy HH:mm", CultureInfo.InvariantCulture);
-            AddLine(TwoColumns($"ORDEN: #{ordenNum}", fecha, lineWidth));
+            var fecha = (comp?.FechaEmision ?? orden.FechaRecepcion).ToString("dd/MM/yy HH:mm", CultureInfo.InvariantCulture);
+
+            if (comp != null)
+            {
+                var tipoDesc = comp.TipoDoc == "01" ? "FACTURA ELECTRÓNICA" : (comp.TipoDoc == "03" ? "BOLETA ELECTRÓNICA" : "NOTA DE CRÉDITO");
+                Add(0x1B, 0x45, 0x01);
+                AddLine(TwoColumns(tipoDesc, comp.NumeroCompleto, lineWidth));
+                Add(0x1B, 0x45, 0x00);
+                AddLine(TwoColumns($"ORDEN INTERNA: #{ordenNum}", fecha, lineWidth));
+            }
+            else
+            {
+                var docDesc = esFactura ? "FACTURA (ORDEN)" : "BOLETA / TICKET";
+                Add(0x1B, 0x45, 0x01);
+                AddLine(TwoColumns(docDesc, $"#{ordenNum}", lineWidth));
+                Add(0x1B, 0x45, 0x00);
+                AddLine($"Fecha: {fecha}");
+            }
 
             AddLine(new string('-', lineWidth));
 
-            var cliente = orden.Cliente?.NombreCompleto ?? "Cliente";
-            Add(0x1B, 0x45, 0x01);
-            foreach (var l in Wrap(cliente, lineWidth))
+            // Datos del Cliente Receptor
+            if (esFactura)
             {
-                AddLine(l);
+                var rucCli = comp?.NumDocCliente ?? orden.Cliente?.Dni ?? "--";
+                var rznCli = comp?.RznSocialCliente ?? orden.Cliente?.NombreCompleto ?? "--";
+                var dirCli = comp?.DireccionCliente ?? orden.Cliente?.Direccion ?? "--";
+
+                AddLine($"RUC RECEPTOR: {rucCli}");
+                Add(0x1B, 0x45, 0x01);
+                foreach (var l in Wrap($"RAZON SOCIAL: {rznCli}", lineWidth))
+                {
+                    AddLine(l);
+                }
+                Add(0x1B, 0x45, 0x00);
+                foreach (var l in Wrap($"DIR. FISCAL: {dirCli}", lineWidth))
+                {
+                    AddLine(l);
+                }
             }
-            Add(0x1B, 0x45, 0x00);
+            else
+            {
+                var dniCli = comp?.NumDocCliente ?? (string.IsNullOrWhiteSpace(orden.Cliente?.Dni) ? "SIN DOCUMENTO" : orden.Cliente.Dni);
+                var nomCli = comp?.RznSocialCliente ?? orden.Cliente?.NombreCompleto ?? "CLIENTES VARIOS";
+
+                AddLine($"DNI: {dniCli}");
+                Add(0x1B, 0x45, 0x01);
+                foreach (var l in Wrap($"CLIENTE: {nomCli}", lineWidth))
+                {
+                    AddLine(l);
+                }
+                Add(0x1B, 0x45, 0x00);
+            }
 
             var tel = string.IsNullOrWhiteSpace(orden.Telefono) ? (orden.Cliente?.Telefono ?? "--") : orden.Telefono;
             AddLine($"Tel: {tel}");
@@ -170,11 +216,35 @@ namespace AppLavaluc.Services
 
             AddLine(new string('-', lineWidth));
 
+            // Cálculos Tributarios SUNAT
+            decimal totalGeneral = orden.MontoTotal;
+            decimal opGravada = comp != null && comp.MontoOperacionesGravadas > 0
+                ? comp.MontoOperacionesGravadas
+                : Math.Round(totalGeneral / 1.18m, 2);
+            decimal totalIgv = comp != null && comp.MontoIgv > 0
+                ? comp.MontoIgv
+                : (totalGeneral - opGravada);
+
+            AddLine(TwoColumns("OP. GRAVADA:", $"S/. {opGravada.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
+            AddLine(TwoColumns("I.G.V. (18%):", $"S/. {totalIgv.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
+
             Add(0x1B, 0x45, 0x01);
-            AddLine(TwoColumns("TOTAL:", $"S/. {orden.MontoTotal.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
+            AddLine(TwoColumns("IMPORTE TOTAL:", $"S/. {totalGeneral.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
             Add(0x1B, 0x45, 0x00);
-            AddLine(TwoColumns("A CUENTA:", $"S/. {orden.MontoPagado.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
-            AddLine(TwoColumns("RESTO:", $"S/. {orden.SaldoPendiente.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
+
+            try
+            {
+                var letras = AppLavaluc.Helpers.NumeroLetrasHelper.Convertir(totalGeneral);
+                foreach (var l in Wrap($"SON: {letras}", lineWidth))
+                {
+                    AddLine(l);
+                }
+            }
+            catch { }
+
+            AddLine(new string('-', lineWidth));
+            AddLine(TwoColumns("A CUENTA / PAGADO:", $"S/. {orden.MontoPagado.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
+            AddLine(TwoColumns("SALDO PENDIENTE:", $"S/. {orden.SaldoPendiente.ToString("0.00", CultureInfo.InvariantCulture)}", lineWidth));
 
             if (!string.IsNullOrWhiteSpace(orden.Observaciones))
             {
@@ -185,12 +255,23 @@ namespace AppLavaluc.Services
                 }
             }
 
+            if (!string.IsNullOrWhiteSpace(comp?.HashCdr))
+            {
+                AddLine(new string('-', lineWidth));
+                AddLine($"Hash CDR: {comp.HashCdr}");
+            }
+
             AddLine(new string('-', lineWidth));
             Add(0x1B, 0x61, 0x01);
+            if (comp != null)
+            {
+                AddLine($"Representacion impresa de la {(esFactura ? "FACTURA" : "BOLETA")} ELECTRONICA");
+                AddLine("Consulte su validez en www.sunat.gob.pe");
+            }
             AddLine("*** GRACIAS POR SU PREFERENCIA ***");
             AddLine("Revise sus prendas antes de retirar.");
             AddLine("No hay lugar a reclamo pasadas las 24hrs.");
-            AddLine(orden.OrdenID.ToString(CultureInfo.InvariantCulture));
+            AddLine($"ORDEN #{orden.OrdenID}");
 
             Add(0x0A, 0x0A, 0x0A);
             Add(0x1D, 0x56, 0x42, 0x00);

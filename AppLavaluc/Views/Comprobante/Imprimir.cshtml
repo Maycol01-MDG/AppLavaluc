@@ -1,0 +1,347 @@
+@model AppLavaluc.Models.Comprobante
+@{
+    ViewData["Title"] = $"{Model.TipoDocDescripcion} {Model.NumeroCompleto}";
+    Layout = null; // Vista independiente sin navbar para impresión limpia
+    var orden = Model.Orden;
+    var detalles = orden?.Detalles?.ToList() ?? new List<AppLavaluc.Models.DetalleOrden>();
+    var formato = (ViewBag.Formato as string) ?? "ticket"; // "ticket" o "a4"
+
+    // Construcción del texto estándar QR SUNAT
+    // RUC Emisor | Tipo Doc | Serie | Correlativo | IGV | Total | Fecha | Tipo Doc Cliente | N° Doc Cliente
+    var qrContent = $"{Model.RucEmisor}|{Model.TipoDoc}|{Model.Serie}|{Model.Correlativo}|{Model.MontoIgv:F2}|{Model.MontoTotal:F2}|{Model.FechaEmision:yyyy-MM-dd}|{Model.TipoDocCliente}|{Model.NumDocCliente}";
+    var qrUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={Uri.EscapeDataString(qrContent)}";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #212529;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Formato Ticket (80mm) */
+        .ticket-container {
+            max-width: 320px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.35;
+        }
+
+        /* Formato Hoja A4 */
+        .a4-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 35px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        .border-dashed {
+            border-bottom: 1px dashed #6c757d;
+            margin: 10px 0;
+        }
+
+        .border-box {
+            border: 2px solid #0d6efd;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        /* Barra de acciones flotante */
+        .action-bar {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(33, 37, 41, 0.92);
+            backdrop-filter: blur(8px);
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+            z-index: 9999;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Estilos de Impresión */
+        @@media print {
+            body {
+                background: #fff !important;
+                padding: 0 !important;
+            }
+            .action-bar {
+                display: none !important;
+            }
+            .ticket-container, .a4-container {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA DE ACCIONES FLOTANTE -->
+    <div class="action-bar">
+        <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+            <i class="bi bi-printer-fill me-1"></i> Imprimir
+        </button>
+        <a asp-action="DescargarPdf" asp-route-id="@Model.ComprobanteID" class="btn btn-outline-light rounded-pill px-3">
+            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+        </a>
+        <a asp-action="DescargarXml" asp-route-id="@Model.ComprobanteID" class="btn btn-outline-light rounded-pill px-3">
+            <i class="bi bi-file-earmark-code me-1"></i> XML
+        </a>
+        <div class="vr bg-secondary my-1"></div>
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary text-white rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Volver
+        </a>
+    </div>
+
+    @if (formato == "a4")
+    {
+        <!-- FORMATO A4 / FACTURA COMPLETA -->
+        <div class="a4-container">
+            <div class="row align-items-center mb-4">
+                <div class="col-7">
+                    @if (!string.IsNullOrEmpty(ViewBag.CustomLogoBase64 as string))
+                    {
+                        <img src="@ViewBag.CustomLogoBase64" alt="Logo Empresa" style="max-height: 155px; max-width: 360px; width: auto; height: auto; object-fit: contain;" class="mb-2" /><br />
+                    }
+                    else
+                    {
+                        <h3 class="fw-bold text-primary mb-1">
+                            <i class="bi bi-droplet-half me-1"></i> APP LAVALUC
+                        </h3>
+                    }
+                    <h6 class="fw-bold text-dark mb-1">@Model.RazonSocialEmisor</h6>
+                    <div class="text-muted small">
+                        <div><i class="bi bi-geo-alt me-1"></i> Av. Villa Nueva 221 - Lima, Perú</div>
+                        <div><i class="bi bi-telephone me-1"></i> Central: (01) 999 888 777</div>
+                        <div><i class="bi bi-envelope me-1"></i> facturacion@lavaluc.com</div>
+                    </div>
+                </div>
+                <div class="col-5">
+                    <div class="border-box">
+                        <h6 class="fw-bold mb-1">R.U.C. @Model.RucEmisor</h6>
+                        <h5 class="fw-bold text-primary mb-1 text-uppercase">@Model.TipoDocDescripcion</h5>
+                        <h4 class="fw-bold mb-0">@Model.NumeroCompleto</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATOS DEL CLIENTE Y COMPROBANTE -->
+            <div class="card border-0 bg-light rounded-3 p-3 mb-4">
+                <div class="row g-2">
+                    <div class="col-8">
+                        <span class="text-muted small">Señor(es):</span>
+                        <div class="fw-bold text-dark">@(Model.RznSocialCliente ?? "CLIENTES VARIOS")</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="text-muted small">Fecha de Emisión:</span>
+                        <div class="fw-bold text-dark">@Model.FechaEmision.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                    <div class="col-8">
+                        <span class="text-muted small">Dirección:</span>
+                        <div class="text-dark">@(Model.DireccionCliente ?? "-")</div>
+                    </div>
+                    <div class="col-4">
+                        <span class="text-muted small">@(Model.TipoDocCliente == "6" ? "R.U.C." : "D.N.I."):</span>
+                        <div class="fw-bold text-dark">@(Model.NumDocCliente ?? "-")</div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.NumDocAfectado))
+                    {
+                        <div class="col-12 mt-2 pt-2 border-top">
+                            <span class="badge bg-warning text-dark me-2">Documento Afectado:</span>
+                            <span class="fw-bold">@Model.NumDocAfectado</span>
+                            <span class="text-muted ms-3">Motivo:</span>
+                            <span class="fw-bold">@Model.DesMotivo</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- TABLA DE ITEMS -->
+            <table class="table table-bordered align-middle mb-4">
+                <thead class="table-primary text-center small text-uppercase">
+                    <tr>
+                        <th style="width: 60px;">Cant.</th>
+                        <th style="width: 70px;">Unidad</th>
+                        <th>Descripción del Servicio</th>
+                        <th class="text-end" style="width: 110px;">P. Unit</th>
+                        <th class="text-end" style="width: 110px;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in detalles)
+                    {
+                        <tr>
+                            <td class="text-center fw-bold">@item.Cantidad</td>
+                            <td class="text-center">@(item.Servicio?.UnidadMedida ?? "NIU")</td>
+                            <td>
+                                <div class="fw-bold">@(item.Servicio?.NombreServicio ?? "Servicio")</div>
+                                <small class="text-muted">Orden de Servicio #@item.OrdenID</small>
+                            </td>
+                            <td class="text-end">S/. @item.PrecioUnitario.ToString("F2")</td>
+                            <td class="text-end fw-bold">S/. @item.Total.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- TOTALES Y QR -->
+            <div class="row align-items-end">
+                <div class="col-8">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="@qrUrl" alt="QR SUNAT" width="100" height="100" class="border rounded p-1" />
+                        <div class="small text-muted" style="font-size: 0.78rem;">
+                            <div><strong>Estado SUNAT:</strong> <span class="text-success fw-bold">@Model.EstadoSunat</span></div>
+                            <div class="text-truncate" style="max-width: 320px;"><strong>Hash CDR:</strong> @(Model.HashCdr ?? "Generado electrónicamente")</div>
+                            <div>Representación impresa de la @Model.TipoDocDescripcion generada bajo normativa SUNAT UBL 2.1.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <table class="table table-sm table-borderless mb-0 text-end">
+                        <tr>
+                            <td class="text-muted">Op. Gravadas:</td>
+                            <td class="fw-bold">S/. @Model.MontoOperacionesGravadas.ToString("F2")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">I.G.V. (18%):</td>
+                            <td class="fw-bold">S/. @Model.MontoIgv.ToString("F2")</td>
+                        </tr>
+                        <tr class="border-top fs-5">
+                            <td class="fw-bold text-primary">Importe Total:</td>
+                            <td class="fw-bold text-primary">S/. @Model.MontoTotal.ToString("F2")</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- FORMATO TICKET TÉRMICO (80MM) -->
+        <div class="ticket-container">
+            <!-- ENCABEZADO -->
+            <div class="text-center mb-2">
+                @if (!string.IsNullOrEmpty(ViewBag.CustomLogoBase64 as string))
+                {
+                    <img src="@ViewBag.CustomLogoBase64" alt="Logo" style="max-height: 48px; max-width: 150px; object-fit: contain;" class="mb-2" /><br />
+                }
+                <h5 class="fw-bold mb-0 text-uppercase">APP LAVALUC</h5>
+                <div class="fw-bold small">@Model.RazonSocialEmisor</div>
+                <div>RUC: @Model.RucEmisor</div>
+                <div>Av. Villa Nueva 221 - Lima</div>
+                <div>Telf: 999 888 777</div>
+            </div>
+
+            <div class="border-dashed"></div>
+
+            <!-- TIPO Y SERIE -->
+            <div class="text-center my-2">
+                <div class="fw-bold text-uppercase fs-6">@Model.TipoDocDescripcion</div>
+                <div class="fw-bold fs-5">@Model.NumeroCompleto</div>
+                <small class="text-muted">Fecha: @Model.FechaEmision.ToString("dd/MM/yyyy HH:mm")</small>
+            </div>
+
+            <div class="border-dashed"></div>
+
+            <!-- DATOS DEL CLIENTE -->
+            <div class="mb-2 small">
+                <div><strong>Cliente:</strong> @(Model.RznSocialCliente ?? "CLIENTES VARIOS")</div>
+                <div><strong>@(Model.TipoDocCliente == "6" ? "RUC" : "DNI"):</strong> @(Model.NumDocCliente ?? "-")</div>
+                @if (!string.IsNullOrEmpty(Model.DireccionCliente))
+                {
+                    <div><strong>Dirección:</strong> @Model.DireccionCliente</div>
+                }
+                @if (!string.IsNullOrEmpty(Model.NumDocAfectado))
+                {
+                    <div class="text-danger"><strong>Doc. Afectado:</strong> @Model.NumDocAfectado</div>
+                    <div><strong>Motivo:</strong> @Model.DesMotivo</div>
+                }
+            </div>
+
+            <div class="border-dashed"></div>
+
+            <!-- DETALLE DE ITEMS -->
+            <table class="w-100 mb-2 small">
+                <thead>
+                    <tr class="border-bottom">
+                        <th class="text-start">Cant/Servicio</th>
+                        <th class="text-end">P.Unit</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in detalles)
+                    {
+                        <tr>
+                            <td colspan="3" class="fw-bold pt-1">@(d.Servicio?.NombreServicio ?? "Servicio")</td>
+                        </tr>
+                        <tr class="border-bottom pb-1">
+                            <td class="text-muted ps-2">@d.Cantidad @(d.Servicio?.UnidadMedida ?? "NIU")</td>
+                            <td class="text-end text-muted">@d.PrecioUnitario.ToString("F2")</td>
+                            <td class="text-end fw-bold">@d.Total.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- TOTALES -->
+            <div class="border-dashed"></div>
+            <div class="d-flex justify-content-between">
+                <span>Op. Gravadas:</span>
+                <span>S/. @Model.MontoOperacionesGravadas.ToString("F2")</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>I.G.V. (18%):</span>
+                <span>S/. @Model.MontoIgv.ToString("F2")</span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold fs-6 mt-1 border-top pt-1">
+                <span>IMPORTE TOTAL:</span>
+                <span>S/. @Model.MontoTotal.ToString("F2")</span>
+            </div>
+
+            <div class="border-dashed"></div>
+
+            <!-- QR Y CDR -->
+            <div class="text-center my-3">
+                <img src="@qrUrl" alt="QR" width="110" height="110" class="mb-2" />
+                <div class="text-muted" style="font-size: 10px;">
+                    <div><strong>Estado SUNAT:</strong> @Model.EstadoSunat</div>
+                    <div class="text-truncate"><strong>Hash:</strong> @(Model.HashCdr ?? "UBL 2.1")</div>
+                    <div class="mt-1">Representación impresa de la @Model.TipoDocDescripcion generada bajo normativa SUNAT.</div>
+                </div>
+            </div>
+
+            <div class="text-center fw-bold small mt-2">
+                ¡Gracias por su preferencia!
+            </div>
+        </div>
+    }
+
+</body>
+</html>

@@ -10,17 +10,17 @@ namespace AppLavaluc.Models
 
         [Required(ErrorMessage = "El nombre de usuario es obligatorio")]
         [StringLength(50)]
-        public string NombreUsuario { get; set; }
+        public string NombreUsuario { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El nombre completo es obligatorio")]
         [StringLength(100)]
         [Display(Name = "Nombre Completo")]
-        public string NombreCompleto { get; set; }
+        public string NombreCompleto { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El correo electrónico es obligatorio")]
         [EmailAddress(ErrorMessage = "El formato del correo no es válido")]
         [StringLength(100)]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [ValidateNever]
         public string? PasswordHash { get; set; }

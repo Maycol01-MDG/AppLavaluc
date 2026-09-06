@@ -1,0 +1,806 @@
+@model IEnumerable<AppLavaluc.Models.Comprobante>
+@{
+    ViewData["Title"] = "Comprobantes Electrónicos SUNAT";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var motivosNc = ViewBag.MotivosNotaCredito as Dictionary<string, string> ?? new();
+}
+
+<style>
+    /* Estilo Ejecutivo y Profesional para Comprobantes SUNAT */
+    .pro-header-badge {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        background: #0f172a;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    }
+
+    /* Tarjetas de Métricas Ejecutivas - Sobrias y no estridentes */
+    .stat-card-executive {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 18px 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card-executive:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+
+    .stat-card-executive::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+    }
+
+    .stat-bar-total::before { background: #2563eb; }
+    .stat-bar-boletas::before { background: #059669; }
+    .stat-bar-facturas::before { background: #4f46e5; }
+    .stat-bar-nc::before { background: #d97706; }
+    .stat-bar-monto::before { background: #0284c7; }
+
+    .stat-icon-wrapper {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .icon-wrap-total { background: #eff6ff; color: #2563eb; }
+    .icon-wrap-boletas { background: #ecfdf5; color: #059669; }
+    .icon-wrap-facturas { background: #eef2ff; color: #4f46e5; }
+    .icon-wrap-nc { background: #fffbeb; color: #d97706; }
+    .icon-wrap-monto { background: #f0f9ff; color: #0284c7; }
+
+    /* Botones de Acción de Tabla Profesionales y Proporcionados */
+    .btn-action-pro {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background-color: #ffffff;
+        color: #475569;
+        font-size: 0.95rem;
+        transition: all 0.18s ease;
+        text-decoration: none;
+    }
+
+    .btn-action-pro:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-pro-view {
+        background-color: #f8fafc;
+        color: #1e293b;
+        border-color: #cbd5e1;
+    }
+    .btn-pro-view:hover { background-color: #0f172a; color: #ffffff; border-color: #0f172a; }
+
+    .btn-pro-print:hover { background-color: #334155; color: #ffffff; border-color: #334155; }
+    .btn-pro-pdf:hover { background-color: #dc2626; color: #ffffff; border-color: #dc2626; }
+    .btn-pro-xml:hover { background-color: #059669; color: #ffffff; border-color: #059669; }
+    .btn-pro-cdr:hover { background-color: #0284c7; color: #ffffff; border-color: #0284c7; }
+    .btn-pro-nc:hover { background-color: #d97706; color: #ffffff; border-color: #d97706; }
+
+    /* Badges de Estado Sobrios */
+    .badge-estado-pro {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 600;
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+    }
+
+    /* Contenedor de Tabla */
+    .table-container-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+</style>
+
+<div class="container-fluid px-3 px-xl-4 py-3">
+
+    <!-- 1. ENCABEZADO PRINCIPAL -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+            <div class="pro-header-badge">
+                <i class="bi bi-shield-check" style="font-size: 1.75rem;"></i>
+            </div>
+            <div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <h3 class="fw-bold text-dark mb-0">Comprobantes Electrónicos SUNAT</h3>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded small fw-semibold">
+                        <i class="bi bi-broadcast me-1"></i> API Greenter UBL 2.1
+                    </span>
+                </div>
+                <p class="text-muted small mb-0">Gestión, visualización oficial e impresión de Boletas de Venta, Facturas Comerciales y Notas de Crédito.</p>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-controller="Orden" asp-action="Crear" class="btn btn-dark btn-sm rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm">
+                <i class="bi bi-plus-circle-fill"></i>
+                <span>Nueva Venta</span>
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 d-inline-flex align-items-center gap-2" title="Refrescar lista">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Actualizar</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. ALERTAS DE SISTEMA -->
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center mb-4 p-3" role="alert">
+            <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+            <div class="small fw-semibold">@TempData["Mensaje"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center mb-4 p-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill text-danger fs-5 me-2"></i>
+            <div class="small fw-semibold">@TempData["Error"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- 3. TARJETAS DE MÉTRICAS (ESTILO EJECUTIVO PROFESIONAL) -->
+    <div class="row g-3 mb-4">
+        <!-- TOTAL EMITIDOS -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="stat-card-executive stat-bar-total h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="d-block small text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Emitidos</span>
+                        <h3 class="fw-bold text-dark mb-0">@(ViewBag.TotalComprobantes ?? 0)</h3>
+                        <small class="text-muted" style="font-size: 0.75rem;">Documentos registrados</small>
+                    </div>
+                    <div class="stat-icon-wrapper icon-wrap-total">
+                        <i class="bi bi-collection-fill fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOLETAS (B001) -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="stat-card-executive stat-bar-boletas h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="d-block small text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Boletas (03)</span>
+                        <h3 class="fw-bold text-dark mb-0">@(ViewBag.TotalBoletas ?? 0)</h3>
+                        <small class="text-muted" style="font-size: 0.75rem;">Serie B001 - DNI</small>
+                    </div>
+                    <div class="stat-icon-wrapper icon-wrap-boletas">
+                        <i class="bi bi-receipt-cutoff fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FACTURAS (F001) -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="stat-card-executive stat-bar-facturas h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="d-block small text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Facturas (01)</span>
+                        <h3 class="fw-bold text-dark mb-0">@(ViewBag.TotalFacturas ?? 0)</h3>
+                        <small class="text-muted" style="font-size: 0.75rem;">Serie F001 - RUC</small>
+                    </div>
+                    <div class="stat-icon-wrapper icon-wrap-facturas">
+                        <i class="bi bi-buildings-fill fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOTAS DE CRÉDITO -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="stat-card-executive stat-bar-nc h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="d-block small text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Notas de Crédito</span>
+                        <h3 class="fw-bold text-dark mb-0">@(ViewBag.TotalNotasCredito ?? 0)</h3>
+                        <small class="text-muted" style="font-size: 0.75rem;">Anulaciones / Corrección</small>
+                    </div>
+                    <div class="stat-icon-wrapper icon-wrap-nc">
+                        <i class="bi bi-file-earmark-diff-fill fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MONTO TOTAL ACEPTADO -->
+        <div class="col-12 col-sm-12 col-xl">
+            <div class="stat-card-executive stat-bar-monto h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="d-block small text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Monto Total SUNAT</span>
+                        <h3 class="fw-bold text-dark mb-0">S/. @(((decimal)(ViewBag.TotalMontoAceptado ?? 0)).ToString("N2"))</h3>
+                        <small class="text-muted" style="font-size: 0.75rem;">Ventas válidas aceptadas</small>
+                    </div>
+                    <div class="stat-icon-wrapper icon-wrap-monto">
+                        <i class="bi bi-cash-coin fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. PANEL DE BÚSQUEDA Y FILTROS -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white border">
+        <div class="card-body p-3">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label small text-muted fw-semibold mb-1">
+                        <i class="bi bi-search me-1"></i> Buscar Comprobante
+                    </label>
+                    <input type="text" name="buscar" value="@ViewBag.FiltroBuscar"
+                           class="form-control form-control-sm rounded"
+                           placeholder="Serie, correlativo, DNI, RUC..." />
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted fw-semibold mb-1">
+                        <i class="bi bi-funnel me-1"></i> Tipo Documento
+                    </label>
+                    <select name="tipoDoc" class="form-select form-control-sm rounded">
+                        <option value="TODOS" selected="@(ViewBag.FiltroTipoDoc == "TODOS")">Todos los tipos</option>
+                        <option value="01" selected="@(ViewBag.FiltroTipoDoc == "01")">Factura (01)</option>
+                        <option value="03" selected="@(ViewBag.FiltroTipoDoc == "03")">Boleta (03)</option>
+                        <option value="07" selected="@(ViewBag.FiltroTipoDoc == "07")">Nota de Crédito (07)</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted fw-semibold mb-1">
+                        <i class="bi bi-shield-check me-1"></i> Estado SUNAT
+                    </label>
+                    <select name="estado" class="form-select form-control-sm rounded">
+                        <option value="TODOS" selected="@(ViewBag.FiltroEstado == "TODOS")">Todos los estados</option>
+                        <option value="Aceptado" selected="@(ViewBag.FiltroEstado == "Aceptado")">Aceptado</option>
+                        <option value="Anulado con Nota de Crédito" selected="@(ViewBag.FiltroEstado == "Anulado con Nota de Crédito")">Anulado con NC</option>
+                        <option value="Rechazado" selected="@(ViewBag.FiltroEstado == "Rechazado")">Rechazado</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted fw-semibold mb-1">
+                        <i class="bi bi-calendar-event me-1"></i> Desde
+                    </label>
+                    <input type="date" name="fechaInicio" value="@ViewBag.FiltroFechaInicio"
+                           class="form-control form-control-sm rounded" />
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted fw-semibold mb-1">
+                        <i class="bi bi-calendar-event me-1"></i> Hasta
+                    </label>
+                    <input type="date" name="fechaFin" value="@ViewBag.FiltroFechaFin"
+                           class="form-control form-control-sm rounded" />
+                </div>
+
+                <div class="col-12 col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-dark btn-sm rounded w-100" title="Aplicar filtros">
+                        <i class="bi bi-filter"></i>
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded" title="Limpiar filtros">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. TABLA DE COMPROBANTES EMITIDOS -->
+    <div class="table-container-card mb-4">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-table text-secondary"></i>
+                <h6 class="fw-bold text-dark mb-0">Listado de Comprobantes Emitidos</h6>
+            </div>
+            <span class="badge bg-light text-muted border small">
+                Total: @(Model?.Count() ?? 0) registros
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-secondary small text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                    <tr>
+                        <th class="ps-3 py-3" style="min-width: 190px;">Comprobante</th>
+                        <th class="py-3" style="min-width: 220px;">Cliente / Receptor</th>
+                        <th class="py-3 text-center" style="width: 110px;">Orden</th>
+                        <th class="py-3" style="width: 120px;">Fecha de Emisión</th>
+                        <th class="py-3 text-end" style="width: 110px;">Monto Total</th>
+                        <th class="py-3 text-center" style="width: 130px;">Estado SUNAT</th>
+                        <th class="py-3 text-center pe-3" style="width: 220px; min-width: 220px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <!-- COMPROBANTE -->
+                                <td class="ps-3 py-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div>
+                                            <span class="fw-bold text-dark d-block">@item.NumeroCompleto</span>
+                                            <div class="d-flex align-items-center gap-1 mt-1">
+                                                @if (item.TipoDoc == "01")
+                                                {
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0 rounded" style="font-size: 0.7rem; font-weight: 600;">
+                                                        FACTURA
+                                                    </span>
+                                                }
+                                                else if (item.TipoDoc == "03")
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0 rounded" style="font-size: 0.7rem; font-weight: 600;">
+                                                        BOLETA
+                                                    </span>
+                                                }
+                                                else if (item.TipoDoc == "07")
+                                                {
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0 rounded" style="font-size: 0.7rem; font-weight: 600;">
+                                                        NOTA CRÉDITO
+                                                    </span>
+                                                }
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(item.NumDocAfectado))
+                                            {
+                                                <div class="text-danger small mt-1 fw-semibold" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-arrow-return-right me-1"></i> Afecta: @item.NumDocAfectado
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- CLIENTE / RECEPTOR -->
+                                <td class="py-3">
+                                    <div>
+                                        <span class="fw-semibold text-dark d-block text-truncate" style="max-width: 230px;" title="@item.RznSocialCliente">
+                                            @(item.RznSocialCliente ?? "CLIENTES VARIOS")
+                                        </span>
+                                        <span class="badge bg-light text-muted border font-monospace mt-1 px-2 py-0" style="font-size: 0.72rem;">
+                                            @(item.TipoDocCliente == "6" ? "RUC: " : (item.TipoDocCliente == "1" ? "DNI: " : "DOC: "))
+                                            @(item.NumDocCliente ?? "-")
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- ORDEN ASOCIADA -->
+                                <td class="py-3 text-center">
+                                    <a asp-controller="Orden" asp-action="Detalles" asp-route-id="@item.OrdenID"
+                                       class="btn btn-light btn-sm border rounded-pill px-2 py-1 fw-medium text-dark shadow-sm text-decoration-none small d-inline-flex align-items-center gap-1"
+                                       title="Ver orden asociada">
+                                        <i class="bi bi-bag-check text-secondary"></i>
+                                        <span>#@item.OrdenID</span>
+                                    </a>
+                                </td>
+
+                                <!-- FECHA -->
+                                <td class="py-3">
+                                    <span class="d-block text-dark fw-medium small">@item.FechaEmision.ToString("dd/MM/yyyy")</span>
+                                    <small class="text-muted" style="font-size: 0.72rem;">@item.FechaEmision.ToString("HH:mm") hrs</small>
+                                </td>
+
+                                <!-- TOTAL -->
+                                <td class="py-3 text-end">
+                                    <span class="fw-bold text-dark d-block">S/. @item.MontoTotal.ToString("N2")</span>
+                                    <small class="text-muted" style="font-size: 0.7rem;">IGV: S/. @item.MontoIgv.ToString("F2")</small>
+                                </td>
+
+                                <!-- ESTADO SUNAT -->
+                                <td class="py-3 text-center">
+                                    @if (item.EstadoSunat == "Aceptado")
+                                    {
+                                        <span class="badge-estado-pro bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-check-circle-fill"></i> Aceptado
+                                        </span>
+                                    }
+                                    else if (item.EstadoSunat == "Anulado con Nota de Crédito")
+                                    {
+                                        <span class="badge-estado-pro bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                            <i class="bi bi-exclamation-triangle-fill"></i> Anulado (NC)
+                                        </span>
+                                    }
+                                    else if (item.EstadoSunat == "Rechazado")
+                                    {
+                                        <span class="badge-estado-pro bg-danger-subtle text-danger border border-danger-subtle" title="@item.MensajeSunat">
+                                            <i class="bi bi-x-circle-fill"></i> Rechazado
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-estado-pro bg-secondary-subtle text-secondary border">
+                                            <i class="bi bi-hourglass-split"></i> @item.EstadoSunat
+                                        </span>
+                                    }
+                                </td>
+
+                                <!-- ACCIONES SOBRIAS Y COMPLETAS -->
+                                <td class="py-3 text-center pe-3">
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <!-- 1. VISUALIZAR DOCUMENTO COMPLETO (PREVIA ANTES DE DESCARGAR) -->
+                                        <button type="button" class="btn-action-pro btn-pro-view btn-visualizar-modal"
+                                                data-id="@item.ComprobanteID"
+                                                data-numero="@item.NumeroCompleto"
+                                                data-tipo="@item.TipoDocDescripcion"
+                                                data-cliente="@item.RznSocialCliente"
+                                                data-estado="@item.EstadoSunat"
+                                                title="Visualizar Comprobante Completo">
+                                            <i class="bi bi-eye-fill"></i>
+                                        </button>
+
+                                        <!-- 2. IMPRIMIR DIRECTO / PANTALLA COMPLETA -->
+                                        <a asp-action="Visualizar" asp-route-id="@item.ComprobanteID" target="_blank"
+                                           class="btn-action-pro btn-pro-print"
+                                           title="Imprimir / Vista Pantalla Completa">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+
+                                        <!-- 3. DESCARGAR PDF (EVITA ERROR CORRUPTO) -->
+                                        <a asp-action="DescargarPdf" asp-route-id="@item.ComprobanteID" target="_blank"
+                                           class="btn-action-pro btn-pro-pdf"
+                                           title="Descargar Representación en PDF">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                        </a>
+
+                                        <!-- 4. DESCARGAR XML UBL 2.1 -->
+                                        <a asp-action="DescargarXml" asp-route-id="@item.ComprobanteID"
+                                           class="btn-action-pro btn-pro-xml"
+                                           title="Descargar XML UBL 2.1 SUNAT">
+                                            <i class="bi bi-file-earmark-code"></i>
+                                        </a>
+
+                                        <!-- 5. CONSTANCIA CDR / RESPUESTA SUNAT -->
+                                        <button type="button" class="btn-action-pro btn-pro-cdr btn-ver-cdr"
+                                                data-id="@item.ComprobanteID"
+                                                data-numero="@item.NumeroCompleto"
+                                                data-estado="@item.EstadoSunat"
+                                                data-codigo="@item.CodigoRespuesta"
+                                                data-mensaje="@item.MensajeSunat"
+                                                data-hash="@item.HashCdr"
+                                                title="Constancia CDR y Respuesta SUNAT">
+                                            <i class="bi bi-patch-check"></i>
+                                        </button>
+
+                                        <!-- 6. EMITIR NOTA DE CRÉDITO -->
+                                        @if ((item.TipoDoc == "01" || item.TipoDoc == "03") && item.EstadoSunat != "Anulado con Nota de Crédito" && item.EstadoSunat != "Rechazado")
+                                        {
+                                            <button type="button" class="btn-action-pro btn-pro-nc btn-emitir-nc"
+                                                    data-id="@item.ComprobanteID"
+                                                    data-numero="@item.NumeroCompleto"
+                                                    data-tipodoc="@item.TipoDoc"
+                                                    data-cliente="@item.RznSocialCliente"
+                                                    data-monto="@item.MontoTotal.ToString("F2")"
+                                                    title="Emitir Nota de Crédito (Anular)">
+                                                <i class="bi bi-file-earmark-diff"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <div class="py-4">
+                                    <i class="bi bi-receipt text-secondary opacity-50" style="font-size: 2.5rem;"></i>
+                                    <h6 class="fw-bold text-dark mt-2 mb-1">No se encontraron comprobantes</h6>
+                                    <p class="text-muted small mb-3">Intenta cambiar los filtros de búsqueda o emite una nueva venta desde una orden.</p>
+                                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                        Restablecer Filtros
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────
+     MODAL 1: VISUALIZADOR PREVIO DE COMPROBANTE (ANTES DE DESCARGAR)
+     ───────────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalVistaPreviaComprobante" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 950px;">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+            <div class="modal-header bg-white border-bottom py-2 px-3 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-text text-primary fs-5"></i>
+                    <div>
+                        <span id="modalPreviaTitulo" class="fw-bold text-dark fs-6 d-block">Comprobante</span>
+                        <small id="modalPreviaCliente" class="text-muted" style="font-size: 0.75rem;">Cargando detalles...</small>
+                    </div>
+                    <span id="modalPreviaEstado" class="badge bg-success-subtle text-success border border-success-subtle ms-2 small">Aceptado</span>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="btnModalImprimir" class="btn btn-outline-dark btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="bi bi-printer"></i>
+                        <span>Imprimir</span>
+                    </button>
+                    <button type="button" id="btnModalPdf" class="btn btn-danger btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                        <span>Descargar PDF</span>
+                    </button>
+                    <a id="btnModalXml" href="#" class="btn btn-outline-teal btn-sm rounded-pill px-3 border text-success d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="bi bi-file-earmark-code"></i>
+                        <span>XML</span>
+                    </a>
+                    <a id="btnModalNuevaPestana" href="#" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill px-2" title="Abrir en ventana completa">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 position-relative" style="background-color: #f8fafc; min-height: 500px;">
+                <!-- SPINNER DE CARGA -->
+                <div id="modalPreviaSpinner" class="d-flex flex-column align-items-center justify-content-center py-5" style="min-height: 400px;">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <span class="text-muted small">Cargando representación oficial del comprobante...</span>
+                </div>
+                <!-- IFRAME DEL DOCUMENTO -->
+                <iframe id="iframeVisualizador" src="" style="width: 100%; height: 78vh; border: none; display: none;" onload="onIframeLoaded()"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────
+     MODAL 2: DETALLES DE CDR Y RESPUESTA SUNAT
+     ───────────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalCdr" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header bg-dark text-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-patch-check-fill text-info fs-5"></i>
+                    <h6 class="modal-title fw-bold mb-0">Constancia de Recepción SUNAT (CDR)</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div id="cdrIconWrapper" class="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-circle" style="width: 50px; height: 50px; background: #ecfdf5;">
+                        <i class="bi bi-check-lg text-success fs-3"></i>
+                    </div>
+                    <h5 id="cdrNumero" class="fw-bold text-dark mb-1">-</h5>
+                    <span id="cdrEstadoBadge" class="badge bg-success-subtle text-success border px-3 py-1 rounded-pill small">Aceptado</span>
+                </div>
+
+                <div class="border rounded p-3 bg-light mb-3">
+                    <div class="row g-2 small">
+                        <div class="col-4 text-muted">Código Respuesta:</div>
+                        <div class="col-8 fw-bold font-monospace" id="cdrCodigo">0</div>
+
+                        <div class="col-4 text-muted">Mensaje Oficial:</div>
+                        <div class="col-8" id="cdrMensaje">La Factura número F001-XXXX ha sido aceptada.</div>
+
+                        <div class="col-4 text-muted">Código Hash UBL:</div>
+                        <div class="col-8 font-monospace text-truncate text-secondary" id="cdrHash">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────
+     MODAL 3: EMISIÓN DE NOTA DE CRÉDITO
+     ───────────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalEmitirNc" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <form asp-action="EmitirNotaCredito" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ComprobanteId" id="ncComprobanteId" />
+
+                <div class="modal-header bg-warning-subtle text-warning-emphasis py-3 border-bottom border-warning-subtle">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-diff-fill fs-5"></i>
+                        <h6 class="modal-title fw-bold mb-0">Emitir Nota de Crédito Electrónica</h6>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning small py-2 px-3 border-0 rounded-2 mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        La Nota de Crédito anula o corrige formalmente el comprobante emitido ante la SUNAT.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-semibold">Comprobante a Modificar:</label>
+                        <input type="text" id="ncDocAfectado" class="form-control form-control-sm fw-bold bg-light" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-semibold">Cliente:</label>
+                        <input type="text" id="ncCliente" class="form-control form-control-sm bg-light" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-semibold">Monto Total a Afectar:</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light">S/.</span>
+                            <input type="text" id="ncMonto" class="form-control fw-bold bg-light" readonly />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Motivo de Nota de Crédito (Catálogo 09 SUNAT):</label>
+                        <select name="CodMotivo" class="form-select form-select-sm" required>
+                            @foreach (var m in motivosNc)
+                            {
+                                <option value="@m.Key">@m.Key - @m.Value</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Sustento o Razón Detallada:</label>
+                        <textarea name="DesMotivo" class="form-control form-control-sm" rows="2"
+                                  placeholder="Ej: Anulación de la operación por error en la orden de servicio..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark btn-sm rounded-pill px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-send-check me-1"></i> Emitir Nota de Crédito
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function onIframeLoaded() {
+            const spinner = document.getElementById('modalPreviaSpinner');
+            const iframe = document.getElementById('iframeVisualizador');
+            if (spinner && iframe && iframe.src && iframe.src !== 'about:blank') {
+                spinner.classList.add('d-none');
+                iframe.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar Tooltips
+            const tooltips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltips.map(t => new bootstrap.Tooltip(t));
+
+            // 1. Manejo del Modal de Visualización Previa
+            const modalVistaPrevia = new bootstrap.Modal(document.getElementById('modalVistaPreviaComprobante'));
+            const iframe = document.getElementById('iframeVisualizador');
+            const spinner = document.getElementById('modalPreviaSpinner');
+            const titulo = document.getElementById('modalPreviaTitulo');
+            const cliente = document.getElementById('modalPreviaCliente');
+            const estado = document.getElementById('modalPreviaEstado');
+            const btnXml = document.getElementById('btnModalXml');
+            const btnNuevaPestana = document.getElementById('btnModalNuevaPestana');
+            const btnImprimir = document.getElementById('btnModalImprimir');
+            const btnPdf = document.getElementById('btnModalPdf');
+
+            document.querySelectorAll('.btn-visualizar-modal').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const numero = this.dataset.numero;
+                    const tipo = this.dataset.tipo;
+                    const nomCliente = this.dataset.cliente || 'Clientes Varios';
+                    const estSunat = this.dataset.estado || 'Emitido';
+
+                    titulo.textContent = `${tipo} ${numero}`;
+                    cliente.textContent = `Cliente: ${nomCliente}`;
+                    estado.textContent = estSunat;
+
+                    btnXml.href = `/Comprobante/DescargarXml/${id}`;
+                    btnNuevaPestana.href = `/Comprobante/Visualizar/${id}`;
+
+                    // Mostrar spinner y cargar URL limpia
+                    iframe.style.display = 'none';
+                    spinner.classList.remove('d-none');
+                    iframe.src = `/Comprobante/VisualizarContenido/${id}`;
+
+                    modalVistaPrevia.show();
+                });
+            });
+
+            // Imprimir desde el modal
+            if (btnImprimir) {
+                btnImprimir.addEventListener('click', () => {
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                    }
+                });
+            }
+
+            // Descargar PDF desde el modal
+            if (btnPdf) {
+                btnPdf.addEventListener('click', () => {
+                    if (iframe && iframe.contentWindow) {
+                        if (typeof iframe.contentWindow.descargarPdf === 'function') {
+                            btnPdf.disabled = true;
+                            btnPdf.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generando...';
+                            iframe.contentWindow.descargarPdf()
+                                .then(() => {
+                                    btnPdf.disabled = false;
+                                    btnPdf.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> <span>Descargar PDF</span>';
+                                })
+                                .catch(() => {
+                                    btnPdf.disabled = false;
+                                    btnPdf.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> <span>Descargar PDF</span>';
+                                });
+                        } else {
+                            iframe.contentWindow.print();
+                        }
+                    }
+                });
+            }
+
+            // 2. Manejo del Modal de CDR
+            const modalCdr = new bootstrap.Modal(document.getElementById('modalCdr'));
+            document.querySelectorAll('.btn-ver-cdr').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.getElementById('cdrNumero').textContent = this.dataset.numero;
+                    document.getElementById('cdrEstadoBadge').textContent = this.dataset.estado;
+                    document.getElementById('cdrCodigo').textContent = this.dataset.codigo || '0';
+                    document.getElementById('cdrMensaje').textContent = this.dataset.mensaje || 'Comprobante procesado satisfactoriamente por SUNAT.';
+                    document.getElementById('cdrHash').textContent = this.dataset.hash || 'N/A';
+                    modalCdr.show();
+                });
+            });
+
+            // 3. Manejo del Modal de Nota de Crédito
+            const modalNc = new bootstrap.Modal(document.getElementById('modalEmitirNc'));
+            document.querySelectorAll('.btn-emitir-nc').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.getElementById('ncComprobanteId').value = this.dataset.id;
+                    document.getElementById('ncDocAfectado').value = this.dataset.numero;
+                    document.getElementById('ncCliente').value = this.dataset.cliente || 'Clientes Varios';
+                    document.getElementById('ncMonto').value = this.dataset.monto;
+                    modalNc.show();
+                });
+            });
+        });
+    </script>
+}

@@ -1,4 +1,4 @@
-﻿using AppLavaluc.Models;
+using AppLavaluc.Models;
 
 namespace AppLavaluc.Services
 {
@@ -9,7 +9,7 @@ namespace AppLavaluc.Services
     public interface IOrdenService
     {
         Task<(bool Ok, int OrdenId, string? Error)> CrearOrdenAsync(CrearOrdenRequest request);
-        Task<(bool Ok, string? Error)> EntregarOrdenAsync(int ordenId);
+        Task<(bool Ok, string? Error)> EntregarOrdenAsync(int ordenId, string metodoPago = "Efectivo");
         Task<Orden?> ObtenerOrdenConDetallesAsync(int ordenId);
     }
 }

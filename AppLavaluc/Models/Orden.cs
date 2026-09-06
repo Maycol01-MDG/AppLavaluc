@@ -60,6 +60,7 @@ namespace AppLavaluc.Models
 
         public ICollection<Pago>? Pagos { get; set; }
         public ICollection<DetalleOrden>? Detalles { get; set; }
+        public ICollection<Comprobante>? Comprobantes { get; set; }
 
         [NotMapped]
         [Display(Name = "Cantidad de Servicios")]

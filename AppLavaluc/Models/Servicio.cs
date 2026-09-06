@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +11,7 @@ namespace AppLavaluc.Models
 
         [Required(ErrorMessage = "El nombre del servicio es obligatorio")]
         [Display(Name = "Tipo de Servicio")]
-        public string NombreServicio { get; set; }
+        public string NombreServicio { get; set; } = string.Empty;
 
         [Display(Name = "Descripción")]
         public string? Descripcion { get; set; }
@@ -28,7 +28,7 @@ namespace AppLavaluc.Models
         [Required(ErrorMessage = "Debe especificar la unidad de medida (ej. Kilo, Unidad, Pieza, etc.)")]
         [StringLength(30)]
         [Display(Name = "Unidad de Medida")]
-        public string UnidadMedida { get; set; }
+        public string UnidadMedida { get; set; } = string.Empty;
 
         public ICollection<DetalleOrden>? DetallesOrden { get; set; }
     }

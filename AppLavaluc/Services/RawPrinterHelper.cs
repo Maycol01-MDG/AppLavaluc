@@ -53,8 +53,7 @@ namespace AppLavaluc.Services
             {
                 var required = 0;
                 GetDefaultPrinter(new System.Text.StringBuilder(0), ref required);
-                var err = Marshal.GetLastWin32Error();
-                if (required <= 0 || err == 0)
+                if (required <= 0)
                 {
                     return false;
                 }

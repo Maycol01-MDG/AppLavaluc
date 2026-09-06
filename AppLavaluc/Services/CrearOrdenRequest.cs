@@ -10,10 +10,13 @@ namespace AppLavaluc.Services
         public string NombreCliente { get; set; } = string.Empty;
         public string ApellidosCliente { get; set; } = string.Empty;
         public string? TelefonoCliente { get; set; }
+        public string? DireccionCliente { get; set; }
         public string TipoEntrega { get; set; } = string.Empty;
         public decimal MontoPagado { get; set; }
         public DateTime? FechaEntregaEstimada { get; set; }
         public string? Observaciones { get; set; }
+        public string TipoComprobante { get; set; } = "03"; // "03" = Boleta de Venta, "01" = Factura
+        public bool EmitirComprobante { get; set; } = true;
 
         public List<int> ServicioIds { get; set; } = new();
         public List<int> Cantidades { get; set; } = new();

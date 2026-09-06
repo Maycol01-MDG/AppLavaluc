@@ -14,7 +14,7 @@ namespace AppLavaluc.Data
         public DbSet<DetalleOrden> DetallesOrden { get; set; }
         public DbSet<Pago> Pagos { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
-
+        public DbSet<Comprobante> Comprobantes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,6 +38,11 @@ namespace AppLavaluc.Data
             modelBuilder.Entity<Pago>()
                 .HasOne(p => p.Orden)
                 .WithMany(o => o.Pagos)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Comprobante>()
+                .HasOne(c => c.Orden)
+                .WithMany(o => o.Comprobantes)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

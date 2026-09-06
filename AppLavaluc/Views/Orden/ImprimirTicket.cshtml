@@ -2,18 +2,73 @@
 @{
     Layout = null;
     var paper = ViewContext.HttpContext.Request.Query["paper"].ToString();
-    var paperWidth = paper == "58" ? "58mm" : "80mm";
-    var baseFontSize = paper == "58" ? "13px" : "14px";
-    var qtyWidth = paper == "58" ? "8mm" : "10mm";
-    var totalWidth = paper == "58" ? "16mm" : "18mm";
+    var is58 = paper == "58";
+    var paperWidth = is58 ? "58mm" : "80mm";
+    var baseFontSize = is58 ? "11px" : "12px";
     var autoPrint = ViewContext.HttpContext.Request.Query["autoprint"].ToString() == "1";
     var returnUrl = ViewContext.HttpContext.Request.Query["returnUrl"].ToString();
+
+    // Obtener comprobante electrónico si existe
+    var comp = Model.Comprobantes?
+        .OrderByDescending(c => c.ComprobanteID)
+        .FirstOrDefault(c => c.EstadoSunat == "Aceptado")
+        ?? Model.Comprobantes?.OrderByDescending(c => c.ComprobanteID).FirstOrDefault();
+
+    var esFactura = (comp != null && comp.TipoDoc == "01") || (Model.Cliente?.Dni?.Length == 11);
+    var esBoleta = (comp != null && comp.TipoDoc == "03") || (Model.Cliente?.Dni?.Length == 8);
+
+    // Datos del Emisor
+    var emisorRuc = comp?.RucEmisor ?? "10708464100";
+    var emisorRznSocial = comp?.RazonSocialEmisor ?? "MONDRAGON DELGADO MAYCOL";
+    var emisorNombreComercial = "APP LAVALUC";
+    var emisorDireccion = "Av. Villa Nueva 221 - Lima";
+    var emisorTelefono = "(+51) 913-474-275";
+
+    // Tipo y Numeración de Documento
+    string tituloDoc;
+    string numeroDoc;
+    if (comp != null)
+    {
+        tituloDoc = comp.TipoDoc == "01" ? "FACTURA ELECTRÓNICA" 
+                  : (comp.TipoDoc == "03" ? "BOLETA DE VENTA ELECTRÓNICA" 
+                  : "NOTA DE CRÉDITO ELECTRÓNICA");
+        numeroDoc = comp.NumeroCompleto;
+    }
+    else
+    {
+        tituloDoc = esFactura ? "ORDEN DE SERVICIO (FACTURA)" : "TICKET DE VENTA Y SERVICIO";
+        numeroDoc = $"ORD-{Model.OrdenID:D6}";
+    }
+
+    // Cálculos Tributarios (SUNAT IGV 18%)
+    decimal totalGeneral = Model.MontoTotal;
+    decimal opGravada = comp != null && comp.MontoOperacionesGravadas > 0
+        ? comp.MontoOperacionesGravadas
+        : Math.Round(totalGeneral / 1.18m, 2);
+    decimal montoIgv = comp != null && comp.MontoIgv > 0
+        ? comp.MontoIgv
+        : (totalGeneral - opGravada);
+    decimal montoPagado = Model.MontoPagado;
+    decimal saldoPendiente = Model.SaldoPendiente;
+    decimal totalDescuentos = (Model.Detalles ?? Enumerable.Empty<AppLavaluc.Models.DetalleOrden>()).Sum(d => d.Descuento);
+
+    // Monto en letras oficial
+    var montoEnLetras = AppLavaluc.Helpers.NumeroLetrasHelper.Convertir(totalGeneral);
+
+    // Código QR SUNAT
+    string qrUrl = "";
+    if (comp != null)
+    {
+        var qrContent = $"{emisorRuc}|{comp.TipoDoc}|{comp.Serie}|{comp.Correlativo}|{montoIgv:F2}|{totalGeneral:F2}|{comp.FechaEmision:yyyy-MM-dd}|{comp.TipoDocCliente}|{comp.NumDocCliente}";
+        qrUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={Uri.EscapeDataString(qrContent)}";
+    }
 }
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
-    <title>Ticket #@Model.OrdenID</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@tituloDoc @numeroDoc - Ticketera</title>
 
     <style>
         * {
@@ -25,163 +80,240 @@
         html, body {
             margin: 0;
             padding: 0;
-            background: #ffffff;
+            background: #f1f5f9;
             color: #000000;
-            font-family: "Arial", "Verdana", "Tahoma", sans-serif;
+            font-family: 'Courier New', Courier, Consolas, monospace, sans-serif;
             font-size: @baseFontSize;
-            line-height: 1.2;
+            line-height: 1.25;
             font-variant-numeric: tabular-nums;
-            font-weight: 400;
+            font-weight: 500;
         }
 
-        body {
-            width: @paperWidth;
-        }
-
-        .no-print {
-            padding: 10px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .btn {
-            border: 1px solid #000;
-            background: #fff;
-            color: #000;
-            padding: 6px 10px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .ticket {
-            width: @paperWidth;
-            padding: 2mm;
-        }
-
-        .center {
-            text-align: center;
-        }
-
-        .right {
-            text-align: right;
-        }
-
-        .bold {
-            font-weight: 700;
-        }
-
-        .sep {
-            border-top: 1px dashed #000;
-            margin: 2mm 0;
-        }
-
-        .sep-solid {
-            border-top: 2px solid #000;
-            margin: 2mm 0;
-        }
-
-        .header-title {
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .header-line {
-            font-size: 11px;
-            margin-top: 1mm;
-        }
-
-        .meta-row {
+        .no-print-bar {
+            background-color: #1e293b;
+            color: #ffffff;
+            padding: 10px 16px;
             display: flex;
             justify-content: space-between;
-            gap: 6px;
-            margin: 1mm 0;
-        }
-
-        .box {
-            border: 1px solid #000;
-            padding: 2mm;
-            border-radius: 2mm;
-        }
-
-        .box-line {
-            margin-top: 1mm;
-        }
-
-        .items-header {
-            display: flex;
-            gap: 6px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 1mm;
-            margin-bottom: 1mm;
-        }
-
-        .col-name {
-            flex: 1 1 auto;
-            min-width: 0;
-        }
-
-        .col-qty {
-            width: @qtyWidth;
-            text-align: center;
-            flex: 0 0 auto;
-        }
-
-        .col-total {
-            width: @totalWidth;
-            text-align: right;
-            flex: 0 0 auto;
-        }
-
-        .item {
-            display: flex;
-            gap: 6px;
-            padding: 1mm 0;
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-
-        .item-name {
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-
-        .item-subline {
-            font-size: 10px;
-            font-weight: 400;
-        }
-
-        .totals {
-            display: flex;
-            flex-direction: column;
-            gap: 1mm;
-        }
-
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 6px;
-        }
-
-        .grand-total {
+            align-items: center;
+            font-family: system-ui, -apple-system, sans-serif;
             font-size: 13px;
-            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .note {
-            margin-top: 2mm;
-            border: 1px dotted #000;
-            padding: 2mm;
-            overflow-wrap: anywhere;
-            word-break: break-word;
+        .no-print-bar .btn-group-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
-        .footer {
-            margin-top: 3mm;
+        .btn-ticket {
+            border: 1px solid rgba(255,255,255,0.3);
+            background: #ffffff;
+            color: #0f172a;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-ticket:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .btn-ticket-primary {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+
+        .btn-ticket-primary:hover {
+            background: #1d4ed8;
+            color: #ffffff;
+        }
+
+        /* Contenedor del Ticket para pantalla */
+        .ticket-wrapper {
+            max-width: @paperWidth;
+            margin: 20px auto;
+            background: #ffffff;
+            padding: @(is58 ? "3mm 2mm" : "4mm 3mm");
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-radius: 4px;
+        }
+
+        /* Elementos de alineación */
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .left { text-align: left; }
+        .bold { font-weight: 700; }
+        .uppercase { text-transform: uppercase; }
+
+        /* Separadores térmicos */
+        .dashed-line {
+            border-top: 1px dashed #000000;
+            margin: 2mm 0;
+        }
+
+        .solid-line {
+            border-top: 2px solid #000000;
+            margin: 2.5mm 0;
+        }
+
+        .double-line {
+            border-top: 3px double #000000;
+            margin: 2.5mm 0;
+        }
+
+        /* Encabezado */
+        .empresa-nombre {
+            font-size: @(is58 ? "13px" : "15px");
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .empresa-razon {
+            font-size: @(is58 ? "10px" : "11px");
+            font-weight: 600;
+            margin-top: 1mm;
+        }
+
+        .empresa-datos {
+            font-size: @(is58 ? "9px" : "10px");
+            line-height: 1.2;
+            margin-top: 0.8mm;
+        }
+
+        /* Caja de Comprobante / Serie */
+        .caja-comprobante {
+            border: 1.5px solid #000000;
+            padding: 2mm 1mm;
+            margin: 2mm 0;
             text-align: center;
-            font-size: 11px;
         }
 
+        .titulo-doc {
+            font-size: @(is58 ? "12px" : "13px");
+            font-weight: 800;
+        }
+
+        .numero-doc {
+            font-size: @(is58 ? "13px" : "15px");
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-top: 1mm;
+        }
+
+        /* Datos del Cliente y Operación */
+        .fila-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.8mm 0;
+            font-size: @(is58 ? "10px" : "11px");
+        }
+
+        .bloque-cliente {
+            font-size: @(is58 ? "10px" : "11px");
+            line-height: 1.25;
+            margin: 1.5mm 0;
+        }
+
+        /* Tabla de Ítems */
+        .tabla-items {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: @(is58 ? "10px" : "11px");
+            margin: 1.5mm 0;
+        }
+
+        .tabla-items th {
+            border-bottom: 1px dashed #000;
+            padding-bottom: 1mm;
+            font-weight: 700;
+            text-align: left;
+        }
+
+        .tabla-items td {
+            padding: 1mm 0;
+            vertical-align: top;
+        }
+
+        .col-cant { width: 14%; text-align: center; }
+        .col-desc { width: 50%; }
+        .col-pu   { width: 18%; text-align: right; }
+        .col-tot  { width: 18%; text-align: right; }
+
+        /* Totales y Desglose Tributario */
+        .tabla-totales {
+            width: 100%;
+            font-size: @(is58 ? "10px" : "11.5px");
+            margin: 1.5mm 0;
+        }
+
+        .tabla-totales td {
+            padding: 0.6mm 0;
+        }
+
+        .total-destacado {
+            font-size: @(is58 ? "13px" : "14px");
+            font-weight: 800;
+        }
+
+        .monto-letras {
+            font-size: @(is58 ? "9px" : "10px");
+            font-style: italic;
+            margin: 1.5mm 0;
+            text-align: center;
+            border-top: 1px dotted #000;
+            border-bottom: 1px dotted #000;
+            padding: 1.5mm 0;
+        }
+
+        /* Pie y QR */
+        .seccion-qr {
+            text-align: center;
+            margin: 2.5mm 0 1.5mm 0;
+        }
+
+        .seccion-qr img {
+            width: 90px;
+            height: 90px;
+            display: inline-block;
+        }
+
+        .hash-cdr {
+            font-size: 8px;
+            font-family: monospace;
+            word-break: break-all;
+            text-align: center;
+            margin-top: 1mm;
+        }
+
+        .leyenda-sunat {
+            font-size: @(is58 ? "8.5px" : "9.5px");
+            text-align: center;
+            line-height: 1.2;
+            margin: 1.5mm 0;
+        }
+
+        .clausulas {
+            font-size: @(is58 ? "8px" : "9px");
+            text-align: center;
+            line-height: 1.2;
+            margin-top: 2mm;
+        }
+
+        /* CONFIGURACIÓN DE IMPRESIÓN DIRECTA PARA TICKETERA */
         @@media print {
             @@page {
                 size: @paperWidth auto;
@@ -190,133 +322,292 @@
 
             html, body {
                 width: @paperWidth;
-                margin: 0;
-                padding: 0;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
-            .no-print {
+            .no-print-bar {
                 display: none !important;
             }
 
-            .ticket {
-                width: @paperWidth;
-                padding: 2mm;
+            .ticket-wrapper {
+                max-width: 100% !important;
+                width: @paperWidth !important;
+                margin: 0 !important;
+                padding: @(is58 ? "2mm 1mm" : "3mm 2mm") !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
             }
 
-            tr, td, th, .item {
+            tr, td, th, .bloque-cliente, .caja-comprobante {
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
         }
-
     </style>
 </head>
 <body>
 
     @if (!autoPrint)
     {
-        <div class="no-print">
-            <button type="button" class="btn" onclick="window.print()">Imprimir</button>
-            <button type="button" class="btn" onclick="window.close()">Cerrar</button>
+        <!-- BARRA SUPERIOR DE CONTROL (SOLO VISIBLE EN VISTA MANUAL / PREVISUALIZACIÓN) -->
+        <div class="no-print-bar">
+            <div>
+                <strong>🖨️ Ticketera Térmica (@paperWidth)</strong>
+                <span style="opacity: 0.75; margin-left: 8px;">Orden #@Model.OrdenID</span>
+            </div>
+            <div class="btn-group-nav">
+                <button type="button" class="btn-ticket btn-ticket-primary" onclick="window.print()">
+                    Imprimir Ticket
+                </button>
+                <a href="?paper=@(is58 ? "80" : "58")&returnUrl=@Uri.EscapeDataString(returnUrl)" class="btn-ticket">
+                    Cambiar a @(is58 ? "80mm" : "58mm")
+                </a>
+                @if (!string.IsNullOrEmpty(returnUrl))
+                {
+                    <a href="@returnUrl" class="btn-ticket">
+                        ⬅ Volver al Listado
+                    </a>
+                }
+                else
+                {
+                    <a asp-action="Index" class="btn-ticket">
+                        ⬅ Volver a Órdenes
+                    </a>
+                }
+            </div>
         </div>
     }
 
-    <div class="ticket">
+    <!-- CONTENEDOR FÍSICO DEL TICKET -->
+    <div class="ticket-wrapper">
 
+        <!-- 1. CABECERA DE LA EMPRESA EMISORA -->
         <div class="center">
-            <div class="header-title">APP LAVALUC</div>
-            <div class="header-line">Av. Principal 123, Centro</div>
-            <div class="header-line">Tel: (01) 999-999-999</div>
-            <div class="header-line">RUC: 10123456789</div>
+            <div class="empresa-nombre">@emisorNombreComercial</div>
+            <div class="empresa-razon">@emisorRznSocial</div>
+            <div class="empresa-datos bold">R.U.C.: @emisorRuc</div>
+            <div class="empresa-datos">@emisorDireccion</div>
+            <div class="empresa-datos">Teléf: @emisorTelefono</div>
         </div>
 
-        <div class="sep"></div>
-
-        <div class="meta-row">
-            <div class="bold">ORDEN: #@Model.OrdenID.ToString("D6")</div>
-            <div>@Model.FechaRecepcion.ToString("dd/MM/yy HH:mm")</div>
+        <!-- 2. RECUADRO DEL COMPROBANTE -->
+        <div class="caja-comprobante">
+            <div class="titulo-doc">@tituloDoc</div>
+            <div class="numero-doc">@numeroDoc</div>
         </div>
 
-        <div class="box">
-            <div class="bold">@Model.Cliente?.NombreCompleto</div>
-            <div class="box-line">Tel: @(Model.Cliente?.Telefono ?? "--")</div>
-            <div class="box-line">Entrega: <span class="bold">@Model.TipoEntrega</span></div>
-            <div class="box-line">Fecha Est.: <span class="bold">@(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "Por confirmar")</span></div>
+        <!-- 3. FECHA Y DATOS DE LA ORDEN -->
+        <div class="fila-info">
+            <span>F. EMISIÓN:</span>
+            <span class="bold">@((comp?.FechaEmision ?? Model.FechaRecepcion).ToString("dd/MM/yyyy HH:mm"))</span>
+        </div>
+        <div class="fila-info">
+            <span>ORDEN INTERNA:</span>
+            <span class="bold">#@Model.OrdenID.ToString("D6")</span>
+        </div>
+        <div class="fila-info">
+            <span>ENTREGA EST.:</span>
+            <span class="bold">@(Model.FechaEntregaEstimada?.ToString("dd/MM/yyyy") ?? "Por coordinar")</span>
+        </div>
+        <div class="fila-info">
+            <span>MODALIDAD:</span>
+            <span class="bold uppercase">@Model.TipoEntrega</span>
         </div>
 
-        <div class="items-header bold">
-            <div class="col-name">DESCRIPCIÓN</div>
-            <div class="col-qty">CANT</div>
-            <div class="col-total">IMPORTE</div>
+        <div class="dashed-line"></div>
+
+        <!-- 4. DATOS DEL CLIENTE (ADQUIRIENTE) - OBLIGATORIO FACTURA Y BOLETA -->
+        <div class="bloque-cliente">
+            @if (esFactura)
+            {
+                <div class="bold" style="text-decoration: underline; margin-bottom: 0.5mm;">DATOS DEL RECEPTOR (FACTURA):</div>
+                <div><span class="bold">R.U.C.:</span> @(comp?.NumDocCliente ?? Model.Cliente?.Dni ?? "--")</div>
+                <div><span class="bold">RAZÓN SOCIAL:</span> @(comp?.RznSocialCliente ?? Model.Cliente?.NombreCompleto ?? "--")</div>
+                <div><span class="bold">DIR. FISCAL:</span> @(comp?.DireccionCliente ?? Model.Cliente?.Direccion ?? "--")</div>
+                @if (!string.IsNullOrWhiteSpace(Model.Cliente?.Telefono) || !string.IsNullOrWhiteSpace(Model.Telefono))
+                {
+                    <div><span class="bold">TELÉFONO:</span> @(Model.Cliente?.Telefono ?? Model.Telefono)</div>
+                }
+            }
+            else
+            {
+                <div class="bold" style="text-decoration: underline; margin-bottom: 0.5mm;">DATOS DEL CLIENTE (BOLETA):</div>
+                <div><span class="bold">D.N.I.:</span> @(comp?.NumDocCliente ?? (string.IsNullOrWhiteSpace(Model.Cliente?.Dni) ? "SIN DOCUMENTO" : Model.Cliente.Dni))</div>
+                <div><span class="bold">CLIENTE:</span> @(comp?.RznSocialCliente ?? Model.Cliente?.NombreCompleto ?? "CLIENTES VARIOS")</div>
+                @if (!string.IsNullOrWhiteSpace(Model.Cliente?.Telefono) || !string.IsNullOrWhiteSpace(Model.Telefono))
+                {
+                    <div><span class="bold">TELÉFONO:</span> @(Model.Cliente?.Telefono ?? Model.Telefono)</div>
+                }
+                @if (Model.TipoEntrega == "Delivery" && !string.IsNullOrWhiteSpace(Model.Cliente?.Direccion))
+                {
+                    <div><span class="bold">DIR. ENTREGA:</span> @Model.Cliente.Direccion</div>
+                }
+            }
         </div>
 
-        @foreach (var item in Model.Detalles)
+        <div class="dashed-line"></div>
+
+        <!-- 5. DETALLE DE PRENDAS / SERVICIOS -->
+        <table class="tabla-items">
+            <thead>
+                <tr>
+                    <th class="col-cant">CANT</th>
+                    <th class="col-desc">DESCRIPCIÓN</th>
+                    <th class="col-pu">P.UNIT</th>
+                    <th class="col-tot">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var det in (Model.Detalles ?? Enumerable.Empty<AppLavaluc.Models.DetalleOrden>()))
+                {
+                    <tr>
+                        <td class="col-cant bold">@det.Cantidad</td>
+                        <td class="col-desc">
+                            <div>@det.Servicio?.NombreServicio</div>
+                            @if (det.Descuento > 0)
+                            {
+                                <div style="font-size: 9px;">(Dscto: -S/. @det.Descuento.ToString("0.00"))</div>
+                            }
+                        </td>
+                        <td class="col-pu">@det.PrecioUnitario.ToString("0.00")</td>
+                        <td class="col-tot bold">@det.Total.ToString("0.00")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="solid-line"></div>
+
+        <!-- 6. RESUMEN ECONÓMICO Y TRIBUTARIO (EXACTITUD SUNAT) -->
+        <table class="tabla-totales">
+            <tr>
+                <td>OP. GRAVADA:</td>
+                <td class="right">S/. @opGravada.ToString("F2")</td>
+            </tr>
+            <tr>
+                <td class="bold">I.G.V. (18%):</td>
+                <td class="right bold">S/. @montoIgv.ToString("F2")</td>
+            </tr>
+            <tr>
+                <td>OP. EXONERADA / INAFECTA:</td>
+                <td class="right">S/. 0.00</td>
+            </tr>
+            @if (totalDescuentos > 0)
+            {
+                <tr>
+                    <td>DESCUENTO TOTAL:</td>
+                    <td class="right">-S/. @totalDescuentos.ToString("F2")</td>
+                </tr>
+            }
+            <tr class="total-destacado">
+                <td style="padding-top: 1.5mm;">IMPORTE TOTAL:</td>
+                <td class="right" style="padding-top: 1.5mm;">S/. @totalGeneral.ToString("F2")</td>
+            </tr>
+        </table>
+
+        <!-- 7. MONTO EN LETRAS -->
+        <div class="monto-letras bold">
+            SON: @montoEnLetras
+        </div>
+
+        <!-- 8. ESTADO DE PAGO Y CAJA -->
+        <div class="dashed-line"></div>
+        <table class="tabla-totales">
+            <tr>
+                <td>FORMA DE PAGO:</td>
+                <td class="right bold">CONTADO / EFECTIVO</td>
+            </tr>
+            <tr>
+                <td>MONTO A CUENTA / PAGADO:</td>
+                <td class="right bold">S/. @montoPagado.ToString("F2")</td>
+            </tr>
+            <tr>
+                <td>SALDO PENDIENTE:</td>
+                <td class="right bold" style="color: @(saldoPendiente > 0 ? "#b91c1c" : "#000");">
+                    S/. @saldoPendiente.ToString("F2")
+                </td>
+            </tr>
+            <tr>
+                <td>ESTADO:</td>
+                <td class="right bold uppercase">
+                    @(saldoPendiente <= 0 ? "CANCELADO" : "PENDIENTE DE PAGO")
+                </td>
+            </tr>
+        </table>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Observaciones))
         {
-            <div class="item">
-                <div class="col-name">
-                    <div class="item-name">@item.Servicio?.NombreServicio</div>
-                    @if (item.Descuento > 0)
-                    {
-                        <div class="item-subline">(Desc: -@item.Descuento.ToString("0.00"))</div>
-                    }
-                </div>
-                <div class="col-qty">@item.Cantidad</div>
-                <div class="col-total">@item.Total.ToString("0.00")</div>
+            <div class="dashed-line"></div>
+            <div style="font-size: @(is58 ? "9px" : "10px");">
+                <span class="bold">OBSERVACIONES:</span> @Model.Observaciones
             </div>
         }
 
-        <div class="sep-solid"></div>
+        <div class="double-line"></div>
 
-        <div class="totals">
-            <div class="total-row grand-total">
-                <div class="bold">TOTAL:</div>
-                <div class="right bold">S/. @Model.MontoTotal.ToString("F2")</div>
-            </div>
-            <div class="total-row">
-                <div>A CUENTA:</div>
-                <div class="right">S/. @Model.MontoPagado.ToString("F2")</div>
-            </div>
-            <div class="total-row">
-                <div>RESTO:</div>
-                <div class="right bold">S/. @Model.SaldoPendiente.ToString("F2")</div>
-            </div>
-        </div>
-
-        @if (!string.IsNullOrEmpty(Model.Observaciones))
+        <!-- 9. CÓDIGO QR Y VALIDACIÓN SUNAT -->
+        @if (!string.IsNullOrEmpty(qrUrl))
         {
-            <div class="note">
-                <span class="bold">NOTA:</span> @Model.Observaciones
+            <div class="seccion-qr">
+                <img src="@qrUrl" alt="Código QR SUNAT" />
+                @if (!string.IsNullOrEmpty(comp?.HashCdr))
+                {
+                    <div class="hash-cdr">Hash CDR: @comp.HashCdr</div>
+                }
+            </div>
+            <div class="leyenda-sunat">
+                <div>Representación impresa de la</div>
+                <div class="bold">@(esFactura ? "FACTURA" : "BOLETA DE VENTA") ELECTRÓNICA</div>
+                <div>Consulte su validez en: <span class="bold">www.sunat.gob.pe</span></div>
+                <div>Autorizado mediante Resolución SUNAT</div>
+            </div>
+        }
+        else
+        {
+            <div class="leyenda-sunat">
+                <div class="bold">COMPROBANTE DE CONTROL INTERNO</div>
+                <div>Conserve este ticket para retirar sus prendas.</div>
             </div>
         }
 
-        <div class="footer">
-            <p>*** GRACIAS POR SU PREFERENCIA ***</p>
-            <p>Revise sus prendas antes de retirar.</p>
-            <p>No hay lugar a reclamo pasadas las 24hrs.</p>
-            <p>@Model.OrdenID</p>
+        <!-- 10. CLÁUSULAS DEL SERVICIO DE LAVANDERÍA -->
+        <div class="dashed-line"></div>
+        <div class="clausulas">
+            <p class="bold">*** GRACIAS POR SU PREFERENCIA ***</p>
+            <p>1. Revise sus prendas antes de salir del local.</p>
+            <p>2. No hay lugar a reclamo pasadas las 24 horas.</p>
+            <p>3. Prendas no reclamadas después de 30 días pasarán a donación según política de la empresa.</p>
+            <p style="margin-top: 1mm;">ID Sistema: #@Model.OrdenID</p>
         </div>
 
     </div>
 
+    <!-- SCRIPT DE IMPRESIÓN AUTOMÁTICA AL FINALIZAR ORDEN -->
     @if (autoPrint)
     {
         <script>
-            window.addEventListener('load', () => {
+            window.addEventListener('load', function () {
                 const returnUrl = @System.Text.Json.JsonSerializer.Serialize(returnUrl);
-                document.body.style.visibility = 'hidden';
-                window.onbeforeprint = () => {
-                    document.body.style.visibility = 'visible';
-                };
-                window.onafterprint = () => {
-                    if (returnUrl) {
+                
+                // Si la ventana no está dentro de un iframe (abierta directamente) y termina de imprimir, redirigir
+                window.onafterprint = function () {
+                    if (returnUrl && window.self === window.top) {
                         window.location.href = returnUrl;
                     }
                 };
-                window.print();
+
+                // Esperamos 150ms para asegurar la carga del QR y tipografía térmica
+                setTimeout(function () {
+                    window.focus();
+                    window.print();
+                }, 150);
             });
         </script>
     }
+
 </body>
 </html>

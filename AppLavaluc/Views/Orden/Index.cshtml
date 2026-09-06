@@ -1,159 +1,574 @@
 @model IEnumerable<AppLavaluc.Models.Orden>
 @{
     ViewData["Title"] = "Órdenes";
+    ViewData["FullWidth"] = true;
 }
 
-<div class="container mt-4">
+<div class="w-100">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="text-primary mb-0">📋 Lista de Órdenes</h2>
-        <a asp-action="Crear" class="btn btn-success shadow-sm">
-            <i class="bi bi-plus-circle"></i> Nueva Orden
+        <h2 class="text-primary mb-0 fw-bold"><i class="bi bi-basket2-fill me-2"></i> Lista de Órdenes</h2>
+        <a asp-action="Crear" class="btn btn-success shadow-sm px-3">
+            <i class="bi bi-plus-circle me-1"></i> Nueva Orden
         </a>
     </div>
 
     @if (TempData["Mensaje"] != null)
     {
-        <div class="alert alert-success shadow-sm" role="alert">
-            @TempData["Mensaje"]
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Mensaje"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Advertencia"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i> @TempData["Advertencia"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger shadow-sm" role="alert">
-            @TempData["Error"]
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
-    <div class="card shadow border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Cliente</th>
-                            <th>Recepción</th>
-                            <th>Entrega Est.</th>
-                            <th>Estado</th>
-                            <th>Pago</th>
-                            <th class="text-end">Saldo (Deuda)</th>
-                            <th class="text-center">Acciones / Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            // Lógica visual para las filas
-                            string claseEstado = item.Estado == "Entregado" ? "bg-success" : "bg-warning text-dark";
-                            string claseSaldo = item.SaldoPendiente > 0 ? "text-danger fw-bold" : "text-muted";
+<style>
+    /* Estilos profesionales basados en el boceto oficial */
+    .table-ordenes {
+        width: 100% !important;
+        margin-bottom: 0;
+    }
+    .table-ordenes td, .table-ordenes th {
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 0.65rem 0.8rem;
+    }
 
-                            <tr>
-                                <td class="fw-bold">@item.OrdenID</td>
-                                <td>
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-bold">@item.Cliente?.Nombre @item.Cliente?.Apellidos</span>
-                                        <small class="text-muted">@item.Telefono</small>
-                                    </div>
-                                </td>
-                                <td>@item.FechaRecepcion.ToString("dd/MM")</td>
-                                <td>@item.FechaEntregaEstimada?.ToString("dd/MM")</td>
+    /* Columna Saldo: tipografía limpia según el boceto */
+    .saldo-deuda {
+        font-family: 'Consolas', 'Courier New', monospace, sans-serif;
+        color: #991b1b;
+        font-weight: 800;
+        font-size: 1.05rem;
+        letter-spacing: 0.3px;
+        display: inline-block;
+        white-space: nowrap;
+    }
+    .saldo-cero {
+        font-family: 'Consolas', 'Courier New', monospace, sans-serif;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.95rem;
+        letter-spacing: 0.3px;
+        display: inline-block;
+        white-space: nowrap;
+    }
 
-                                <td><span class="badge @claseEstado">@item.Estado</span></td>
+    /* Columna Comprobante SUNAT */
+    .sunat-cell-box {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-width: 175px;
+    }
 
-                                <td>
-                                    @if (item.EstadoPago == "Pagado")
-                                    {
-                                        <span class="badge bg-success">Pagado</span>
-                                    }
-                                    else
-                                    {
+    /* Píldora verde de correlativo SUNAT */
+    .badge-sunat-pill {
+        background-color: #dcfce7;
+        color: #15803d;
+        border: 1px solid #86efac;
+        border-radius: 50rem;
+        font-family: 'Consolas', monospace;
+        font-weight: 700;
+        font-size: 0.78rem;
+        padding: 0.2rem 0.65rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        line-height: 1.2;
+    }
 
-                                        <span class="badge bg-danger">Pendiente</span>
-                                    }
-                                </td>
+    /* Botones de acción del comprobante según el boceto (Ver | PDF | XML) */
+    .sunat-buttons-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
 
-                                <td class="text-end @claseSaldo">
-                                    S/. @item.SaldoPendiente.ToString("F2")
-                                </td>
+    .btn-sunat-box {
+        height: 28px;
+        padding: 0 8px;
+        background-color: #ffffff;
+        border: 1.5px solid #0284c7;
+        color: #0284c7;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        line-height: 1;
+    }
+    .btn-sunat-box:hover {
+        background-color: #f0f9ff;
+        color: #0369a1;
+        border-color: #0369a1;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 5px rgba(2,132,199,0.2);
+    }
 
-                                <td class="text-center">
-                                    @if (item.Estado == "Entregado")
-                                    {
-                                        // Si ya se entregó, mostramos un check verde y deshabilitamos botones
-                                        <span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Entregado</span>
-                                        <br />
-                                        <a asp-action="ImprimirTicket" asp-route-id="@item.OrdenID" target="_blank" class="btn btn-sm btn-outline-secondary mt-1" title="Reimprimir Ticket">
-                                            <i class="bi bi-printer"></i>
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        // BOTÓN DE ENTREGAR (Abre el Modal)
-                                        <button type="button"
-                                                class="btn btn-sm @(item.SaldoPendiente > 0 ? "btn-warning" : "btn-primary") w-100 mb-1"
-                                                onclick="abrirModalEntrega(@item.OrdenID, '@item.Cliente?.Nombre', @item.SaldoPendiente)">
+    /* Botón Facturar sólido azul según el boceto */
+    .btn-facturar-solid {
+        height: 30px;
+        padding: 0 16px;
+        background-color: #0284c7;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(2,132,199,0.3);
+        transition: all 0.15s ease;
+    }
+    .btn-facturar-solid:hover {
+        background-color: #0369a1;
+        color: #ffffff;
+        box-shadow: 0 3px 8px rgba(2,132,199,0.4);
+        transform: translateY(-1px);
+    }
 
-                                            @if (item.SaldoPendiente > 0)
-                                            {
-                                                <i class="bi bi-cash-coin"></i>
-                                                @:Cobrar y Entregar
-                                            }
-                                            else
-                                            {
-                                                <i class="bi bi-box-seam"></i>
-                                                @:Entregar
-                                            }
-                                        </button>
+    .btn-reintentar-solid {
+        height: 30px;
+        padding: 0 14px;
+        background-color: #dc2626;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(220,38,38,0.3);
+        transition: all 0.15s ease;
+    }
+    .btn-reintentar-solid:hover {
+        background-color: #b91c1c;
+        color: #ffffff;
+        box-shadow: 0 3px 8px rgba(220,38,38,0.4);
+        transform: translateY(-1px);
+    }
 
-                                        // Botones extra
-                                        <div class="btn-group btn-group-sm">
-                                            <a asp-action="Detalles" asp-route-id="@item.OrdenID" class="btn btn-outline-info" title="Ver"><i class="bi bi-eye"></i></a>
-                                            <a asp-action="ImprimirTicket" asp-route-id="@item.OrdenID" target="_blank" class="btn btn-outline-secondary" title="Ticket"><i class="bi bi-printer"></i></a>
+    /* Botón Condicional 1: Cobrar y Entregar (Pago Pendiente) */
+    .btn-cobrar-entregar {
+        height: 32px;
+        padding: 0 10px;
+        font-size: 0.77rem;
+        font-weight: 600;
+        border-radius: 6px;
+        border: 1.5px solid #d97706;
+        background-color: #fffbeb;
+        color: #92400e;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .btn-cobrar-entregar:hover {
+        background-color: #d97706;
+        color: #ffffff;
+        border-color: #d97706;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(217,119,6,0.3);
+    }
+
+    /* Botón Condicional 1: Cobrar y Entregar (Deuda Pendiente) */
+    .btn-entrega-warning {
+        font-weight: 700;
+        font-size: 0.82rem;
+        border-radius: 7px;
+        background-color: #f59e0b;
+        border: 1px solid #d97706;
+        color: #1e293b;
+        padding: 6px 12px;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    .btn-entrega-warning:hover {
+        background-color: #d97706;
+        color: #ffffff;
+        border-color: #b45309;
+        box-shadow: 0 2px 6px rgba(217,119,6,0.35);
+        transform: translateY(-1px);
+    }
+
+    /* Botón Condicional 2: Entregar (Pagado por Adelantado) */
+    .btn-entrega-success {
+        font-weight: 700;
+        font-size: 0.82rem;
+        border-radius: 7px;
+        background-color: #10b981;
+        border: 1px solid #059669;
+        color: #ffffff;
+        padding: 6px 12px;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    .btn-entrega-success:hover {
+        background-color: #059669;
+        color: #ffffff;
+        border-color: #047857;
+        box-shadow: 0 2px 6px rgba(16,185,129,0.35);
+        transform: translateY(-1px);
+    }
+
+    /* Columna Acciones */
+    .acciones-grid {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .btn-action-pro {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 7px;
+        border: 1.5px solid #0284c7;
+        background-color: #ffffff;
+        color: #0284c7;
+        font-size: 0.9rem;
+        transition: all 0.15s ease;
+        text-decoration: none;
+        padding: 0;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .btn-action-pro:hover {
+        background-color: #f0f9ff;
+        color: #0369a1;
+        border-color: #0369a1;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(2,132,199,0.25);
+    }
+
+    /* Estado Deshabilitado (como la fila 5 del boceto) */
+    .btn-action-pro.btn-action-disabled {
+        border-color: #cbd5e1 !important;
+        color: #94a3b8 !important;
+        background-color: #f8fafc !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+</style>
+
+<div class="card shadow-sm border-0 rounded-4 w-100 overflow-hidden mb-3">
+    <div class="card-body p-0">
+        <div class="table-responsive w-100">
+            <table class="table table-hover align-middle mb-0 table-ordenes w-100">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="text-center" style="width: 45px;">#</th>
+                        <th style="min-width: 220px;">Cliente</th>
+                        <th class="text-center" style="width: 90px;">Recepción</th>
+                        <th class="text-center" style="width: 95px;">Entrega Est.</th>
+                        <th class="text-center" style="width: 110px;">Estado</th>
+                        <th class="text-center" style="width: 100px;">Pago</th>
+                        <th class="text-end" style="width: 110px;">Saldo</th>
+                        <th class="text-center" style="width: 190px;">Comprobante SUNAT</th>
+                        <th class="text-center" style="width: 215px;">Acciones / Entrega</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var comprobante = item.Comprobantes?
+                            .OrderByDescending(c => c.ComprobanteID)
+                            .FirstOrDefault();
+
+                        bool esEntregado = item.Estado == "Entregado";
+
+                        <tr id="fila-orden-@item.OrdenID">
+                            <td class="fw-bold text-center text-muted">@item.OrdenID</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-dark">@item.Cliente?.NombreCompleto</span>
+                                    <small class="text-muted">
+                                        <i class="bi bi-telephone me-1"></i>@(item.Telefono ?? item.Cliente?.Telefono ?? "--")
+                                    </small>
+                                </div>
+                            </td>
+                            <td>@item.FechaRecepcion.ToString("dd/MM/yy")</td>
+                            <td>@(item.FechaEntregaEstimada?.ToString("dd/MM/yy") ?? "--")</td>
+
+                            <!-- ESTADO DE SERVICIO (ACTUALIZABLE EN VIVO VÍA JS) -->
+                            <td class="text-center" id="col-estado-@item.OrdenID">
+                                @if (esEntregado)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                        <i class="bi bi-check2-circle me-1"></i>Entregado
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                        <i class="bi bi-clock-history me-1"></i>@item.Estado
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- ESTADO DE PAGO (ACTUALIZABLE EN VIVO VÍA JS) -->
+                            <td class="text-center" id="col-pago-@item.OrdenID">
+                                @if (item.EstadoPago == "Pagado")
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                        <i class="bi bi-check2 me-1"></i>Pagado
+                                    </span>
+                                }
+                                else if (item.EstadoPago == "Parcial")
+                                {
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                        <i class="bi bi-pie-chart me-1"></i>Parcial
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Pendiente
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- SALDO EN UNA SOLA LÍNEA (ACTUALIZABLE EN VIVO VÍA JS) -->
+                            <td class="text-end text-nowrap" id="col-saldo-@item.OrdenID">
+                                @if (item.SaldoPendiente > 0)
+                                {
+                                    <span class="saldo-deuda" title="Saldo pendiente de pago">
+                                        S/ @item.SaldoPendiente.ToString("N2")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="saldo-cero" title="Sin deuda pendiente">
+                                        S/. 0.00
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- COLUMNA FACTURACIÓN ELECTRÓNICA SUNAT -->
+                            <td class="text-center">
+                                @if (comprobante != null && comprobante.EstadoSunat == "Aceptado")
+                                {
+                                    <div class="sunat-cell-box">
+                                        <!-- PÍLDORA VERDE DE COMPROBANTE ACEPTADO -->
+                                        <span class="badge-sunat-pill" title="Aceptado oficialmente por SUNAT">
+                                            <i class="bi bi-check-circle-fill"></i>@comprobante.NumeroCompleto
+                                        </span>
+
+                                        <!-- 3 BOTONES: [🔍 Ver] [📄] [📄 XML] -->
+                                        <div class="sunat-buttons-group">
+                                            <!-- 1. PREVISUALIZAR EN MODAL -->
+                                            <button type="button" class="btn-sunat-box btn-preview-modal"
+                                                    data-id="@comprobante.ComprobanteID"
+                                                    data-numero="@comprobante.NumeroCompleto"
+                                                    data-tipo="@comprobante.TipoDocDescripcion"
+                                                    title="Previsualizar representación A4 antes de descargar">
+                                                <i class="bi bi-search"></i><span>Ver</span>
+                                            </button>
+                                            <!-- 2. VISTA OFICIAL A4 COMPLETA -->
+                                            <a asp-controller="Comprobante" asp-action="Visualizar" asp-route-id="@comprobante.ComprobanteID"
+                                               target="_blank" class="btn-sunat-box" title="Abrir en pantalla completa A4">
+                                                <i class="bi bi-file-earmark-text"></i>
+                                            </a>
+                                            <!-- 3. DESCARGAR XML UBL 2.1 SUNAT -->
+                                            <a asp-controller="Factura" asp-action="DescargarXml" asp-route-id="@comprobante.ComprobanteID"
+                                               class="btn-sunat-box" title="Descargar XML UBL 2.1 SUNAT">
+                                                <i class="bi bi-file-earmark-code"></i><span>XML</span>
+                                            </a>
                                         </div>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                                    </div>
+                                }
+                                else if (comprobante != null && comprobante.EstadoSunat == "Rechazado")
+                                {
+                                    <div class="sunat-cell-box">
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 small" title="@comprobante.MensajeSunat">
+                                            <i class="bi bi-x-circle me-1"></i>Rechazado
+                                        </span>
+                                        <button type="button" class="btn-reintentar-solid"
+                                                onclick="abrirModalFacturar(@item.OrdenID, '@(item.Cliente?.NombreCompleto?.Replace("'", "\\'"))', '@item.Cliente?.Dni', @item.MontoTotal.ToString(System.Globalization.CultureInfo.InvariantCulture))">
+                                            <i class="bi bi-arrow-repeat"></i> Reintentar
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="sunat-cell-box">
+                                        <button type="button" class="btn-facturar-solid"
+                                                onclick="abrirModalFacturar(@item.OrdenID, '@(item.Cliente?.NombreCompleto?.Replace("'", "\\'"))', '@item.Cliente?.Dni', @item.MontoTotal.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                                title="Emitir Factura o Boleta Electrónica">
+                                            <i class="bi bi-receipt"></i> Facturar
+                                        </button>
+                                    </div>
+                                }
+                            </td>
+
+                            <!-- COLUMNA ACCIONES / ENTREGA -->
+                            <td class="text-center">
+                                @if (esEntregado)
+                                {
+                                    <div class="d-flex flex-column align-items-center gap-1">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Entregado
+                                        </span>
+                                        <div class="btn-group btn-group-sm mt-1">
+                                            <a asp-action="Detalles" asp-route-id="@item.OrdenID" class="btn btn-outline-info" title="Ver Detalles">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a asp-action="ImprimirTicket" asp-route-id="@item.OrdenID" target="_blank" class="btn btn-outline-secondary" title="Reimprimir Ticket">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-column align-items-center gap-1 mx-auto" style="min-width: 170px;">
+                                        <!-- BOTÓN PRINCIPAL CONDICIONAL: ABRE MODAL DE ENTREGA -->
+                                        @if (item.SaldoPendiente > 0 || item.EstadoPago == "Pendiente" || item.EstadoPago == "Parcial")
+                                        {
+                                            <!-- CONDICIÓN 1: PAGO PENDIENTE -> Cobrar y Entregar -->
+                                            <button type="button"
+                                                    class="btn-entrega-warning w-100 shadow-sm d-flex align-items-center justify-content-center gap-1"
+                                                    onclick="abrirModalEntrega(@item.OrdenID, '@(item.Cliente?.NombreCompleto?.Replace("'", "\\'"))', @item.SaldoPendiente.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
+                                                    title="Cobrar saldo de S/. @item.SaldoPendiente.ToString("N2") y entregar el pedido">
+                                                <i class="bi bi-cash-coin fs-6"></i>
+                                                <span>Cobrar y Entregar</span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <!-- CONDICIÓN 2: PAGADO POR ADELANTADO -> Entregar -->
+                                            <button type="button"
+                                                    class="btn-entrega-success w-100 shadow-sm d-flex align-items-center justify-content-center gap-1"
+                                                    onclick="abrirModalEntrega(@item.OrdenID, '@(item.Cliente?.NombreCompleto?.Replace("'", "\\'"))', 0)"
+                                                    title="Pedido pagado por adelantado: Confirmar entrega de prendas">
+                                                <i class="bi bi-box-seam fs-6"></i>
+                                                <span>Entregar</span>
+                                            </button>
+                                        }
+
+                                        <!-- BOTONES SECUNDARIOS [Ver] [Ticket] [Editar] -->
+                                        <div class="btn-group btn-group-sm w-100 mt-1">
+                                            <a asp-action="Detalles" asp-route-id="@item.OrdenID" class="btn btn-outline-info" title="Ver Detalles">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a asp-action="ImprimirTicket" asp-route-id="@item.OrdenID" target="_blank" class="btn btn-outline-secondary" title="Imprimir Ticket">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+                                            <a asp-action="Editar" asp-route-id="@item.OrdenID" class="btn btn-outline-primary" title="Editar Orden">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
             </div>
         </div>
     </div>
 </div>
 
+<!-- ───────────────────────────────────────────────────────────── -->
+<!-- MODAL DE CONFIRMACIÓN DE ENTREGA Y COBRO (REUTILIZABLE) -->
+<!-- ───────────────────────────────────────────────────────────── -->
 <div class="modal fade" id="modalEntrega" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form asp-action="EntregarOrden" method="post">
+        <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
+            <form asp-action="EntregarOrden" method="post" id="formEntregaOrden">
+                @Html.AntiForgeryToken()
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="bi bi-box-seam me-2"></i> Confirmar Entrega</h5>
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-box-seam me-2"></i> Confirmar Entrega de Pedido <span id="modalOrdenNumero"></span>
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body text-center">
+                <div class="modal-body text-center p-4">
                     <input type="hidden" name="idOrden" id="hiddenOrdenId" />
 
-                    <h4 class="mb-3" id="modalClienteNombre">Cliente</h4>
-
-                    <div id="divConDeuda" class="alert alert-warning d-none">
-                        <i class="bi bi-exclamation-triangle-fill fs-3 text-danger"></i>
-                        <p class="mt-2 mb-0">El cliente tiene una deuda pendiente de:</p>
-                        <h2 class="text-danger fw-bold mt-2">S/. <span id="modalMontoDeuda">0.00</span></h2>
-                        <hr>
-                        <p class="small text-muted mb-0">Al confirmar, se registrará el pago total y se entregará la ropa.</p>
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block">Cliente</small>
+                        <h4 class="fw-bold text-dark mb-0" id="modalClienteNombre">Cliente</h4>
                     </div>
 
-                    <div id="divSinDeuda" class="alert alert-success d-none">
-                        <i class="bi bi-check-circle-fill fs-3"></i>
-                        <p class="mt-2 fw-bold">¡La orden está pagada!</p>
-                        <p class="mb-0">¿Confirmar entrega de prendas?</p>
+                    <!-- CASO 1: CON DEUDA PENDIENTE -->
+                    <div id="divConDeuda" class="alert alert-warning border border-warning-subtle rounded-3 p-3 d-none">
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                            <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
+                            <span class="fw-bold text-warning-emphasis">Saldo Pendiente de Cobro</span>
+                        </div>
+                        <h2 class="text-danger fw-bold my-2">S/. <span id="modalMontoDeuda">0.00</span></h2>
+                        
+                        <div class="mt-3 text-start bg-white p-3 rounded-3 border">
+                            <label class="form-label fw-bold small text-muted mb-1">
+                                <i class="bi bi-credit-card me-1"></i> Método de Pago del Cobro:
+                            </label>
+                            <select name="metodoPago" class="form-select form-select-sm">
+                                <option value="Efectivo" selected>💵 Efectivo (Caja)</option>
+                                <option value="Yape">📱 Yape</option>
+                                <option value="Plin">📱 Plin</option>
+                                <option value="Tarjeta">💳 Tarjeta Débito / Crédito</option>
+                                <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                            </select>
+                        </div>
+                        
+                        <p class="small text-muted mb-0 mt-3">
+                            <i class="bi bi-info-circle me-1"></i> Al confirmar, se registrará el cobro restante en caja, se saldará la deuda y el pedido pasará a <strong>Entregado</strong>.
+                        </p>
+                    </div>
+
+                    <!-- CASO 2: SIN DEUDA (PAGADO POR ADELANTADO) -->
+                    <div id="divSinDeuda" class="alert alert-success border border-success-subtle rounded-3 p-4 d-none">
+                        <i class="bi bi-check-circle-fill fs-1 text-success d-block mb-2"></i>
+                        <h5 class="fw-bold text-success mb-1">¡La orden está pagada por adelantado!</h5>
+                        <p class="text-muted mb-0">No hay saldo pendiente. ¿Confirmar entrega de las prendas listas al cliente?</p>
                     </div>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success btn-lg">
-                        <i class="bi bi-check-lg"></i> Confirmar Entrega
+                <div class="modal-footer bg-light border-0 justify-content-between px-4 py-3">
+                    <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold shadow-sm" id="btnConfirmarEntrega">
+                        <i class="bi bi-check-lg me-1"></i> Confirmar Entrega
                     </button>
                 </div>
             </form>
@@ -161,30 +576,250 @@
     </div>
 </div>
 
+<!-- ───────────────────────────────────────────────────────────── -->
+<!-- MODAL DE FACTURACIÓN ELECTRÓNICA (BOLETA / FACTURA SUNAT) -->
+<!-- ───────────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalFacturar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form asp-controller="Factura" asp-action="Emitir" method="post" id="formFacturar">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="OrdenId" id="facturaOrdenId" />
+                <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-receipt-cutoff me-2"></i> Emitir Comprobante Electrónico</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="text-center mb-3">
+                        <span class="badge bg-light text-dark border px-3 py-2 fs-6">
+                            Orden: <strong id="facturaOrdenNum">#0</strong> | Total: <strong class="text-primary" id="facturaMontoTotal">S/. 0.00</strong>
+                        </span>
+                    </div>
+
+                    <!-- Tipo de Comprobante -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Tipo de Comprobante</label>
+                        <div class="d-flex gap-2">
+                            <div class="form-check card-radio w-100">
+                                <input class="form-check-input" type="radio" name="TipoDoc" id="tipoDocBoleta" value="03" checked onchange="cambiarTipoDoc()">
+                                <label class="form-check-label w-100 p-2 border rounded text-center cursor-pointer" for="tipoDocBoleta">
+                                    <i class="bi bi-person d-block fs-4 mb-1 text-primary"></i>
+                                    <strong>Boleta de Venta</strong>
+                                    <div class="small text-muted">Serie B001</div>
+                                </label>
+                            </div>
+                            <div class="form-check card-radio w-100">
+                                <input class="form-check-input" type="radio" name="TipoDoc" id="tipoDocFactura" value="01" onchange="cambiarTipoDoc()">
+                                <label class="form-check-label w-100 p-2 border rounded text-center cursor-pointer" for="tipoDocFactura">
+                                    <i class="bi bi-building d-block fs-4 mb-1 text-success"></i>
+                                    <strong>Factura</strong>
+                                    <div class="small text-muted">Serie F001</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Documento (DNI o RUC) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted" id="labelNumDoc">DNI del Cliente</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-card-text" id="iconDoc"></i></span>
+                            <input type="text" name="NumDocCliente" id="facturaNumDoc" class="form-control bg-light border-0"
+                                   maxlength="8" placeholder="Ingrese 8 dígitos" />
+                        </div>
+                    </div>
+
+                    <!-- Nombre o Razón Social -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted" id="labelRznSocial">Nombre del Cliente</label>
+                        <input type="text" name="RznSocialCliente" id="facturaRznSocial" class="form-control bg-light border-0"
+                               placeholder="Nombre completo" required />
+                    </div>
+
+                    <!-- Dirección (Requerida en Factura) -->
+                    <div class="mb-3 d-none" id="divDireccionFiscal">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Dirección Fiscal</label>
+                        <input type="text" name="DireccionCliente" id="facturaDireccion" class="form-control bg-light border-0"
+                               placeholder="Dirección completa de la empresa" />
+                    </div>
+
+                    <div class="alert alert-info py-2 small mb-0">
+                        <i class="bi bi-info-circle me-1"></i> El comprobante será firmado digitalmente y enviado a SUNAT en tiempo real.
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="btnConfirmarEmision">
+                        <i class="bi bi-send-fill me-1"></i> Emitir Comprobante
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ───────────────────────────────────────────────────────────── -->
+<!-- MODAL DE PREVISUALIZACIÓN DE COMPROBANTE ANTES DE DESCARGAR -->
+<!-- ───────────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalPrevisualizarComprobante" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-dark text-white border-0 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-pdf fs-4 text-danger"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="previewModalTitulo">Comprobante Electrónico</h5>
+                        <small class="text-white-50">Previsualización oficial A4 antes de descargar o imprimir</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a id="btnModalImprimirA4" href="#" target="_blank" class="btn btn-sm btn-light rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-printer me-1"></i> Imprimir A4
+                    </a>
+                    <a id="btnModalDescargarPdf" href="#" target="_blank" class="btn btn-sm btn-danger rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-download me-1"></i> Descargar PDF
+                    </a>
+                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" style="background-color: #f1f5f9; height: 75vh; min-height: 520px; position: relative;">
+                <div id="previewLoading" class="text-center py-5" style="position: absolute; top: 35%; left: 0; right: 0;">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                    <p class="text-muted mt-3 fw-medium">Generando representación visual oficial del comprobante...</p>
+                </div>
+                <iframe id="previewIframe" src="" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        function abrirModalEntrega(id, cliente, deuda) {
-            // 1. Asignar valores al modal
+        document.addEventListener('DOMContentLoaded', function () {
+            // Manejador para previsualizar comprobantes antes de descargar
+            document.querySelectorAll('.btn-preview-modal').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    const numero = this.getAttribute('data-numero');
+                    const tipo = this.getAttribute('data-tipo') || 'Comprobante';
+
+                    document.getElementById('previewModalTitulo').innerText = `${tipo}: ${numero}`;
+                    document.getElementById('btnModalImprimirA4').href = `/Comprobante/Visualizar/${id}`;
+                    document.getElementById('btnModalDescargarPdf').href = `/Comprobante/DescargarPdf/${id}`;
+
+                    const iframe = document.getElementById('previewIframe');
+                    const loading = document.getElementById('previewLoading');
+
+                    iframe.style.display = 'none';
+                    loading.style.display = 'block';
+
+                    // Carga el HTML oficial ajustado con logo y estilos de A4
+                    iframe.src = `/Comprobante/VisualizarContenido/${id}`;
+                    iframe.onload = function () {
+                        loading.style.display = 'none';
+                        iframe.style.display = 'block';
+                    };
+
+                    new bootstrap.Modal(document.getElementById('modalPrevisualizarComprobante')).show();
+                });
+            });
+        });
+
+        function abrirModalEntregaBtn(btn) {
+            const id = btn.getAttribute("data-orden-id");
+            const cliente = btn.getAttribute("data-cliente");
+            const deudaStr = (btn.getAttribute("data-deuda") || "0").replace(',', '.');
+            const deuda = parseFloat(deudaStr) || 0;
+
             document.getElementById("hiddenOrdenId").value = id;
             document.getElementById("modalClienteNombre").innerText = cliente;
 
-            // 2. Manejar la lógica de deuda
             const divConDeuda = document.getElementById("divConDeuda");
             const divSinDeuda = document.getElementById("divSinDeuda");
             const spanMonto = document.getElementById("modalMontoDeuda");
 
             if (deuda > 0) {
-                // Caso: Debe dinero
-                spanMonto.innerText = parseFloat(deuda).toFixed(2);
+                spanMonto.innerText = deuda.toFixed(2);
                 divConDeuda.classList.remove("d-none");
                 divSinDeuda.classList.add("d-none");
             } else {
-                // Caso: No debe nada
                 divConDeuda.classList.add("d-none");
                 divSinDeuda.classList.remove("d-none");
             }
 
-            // 3. Mostrar el modal
+            new bootstrap.Modal(document.getElementById('modalEntrega')).show();
+        }
+
+        function abrirModalFacturar(ordenId, clienteNombre, clienteDni, montoTotal) {
+            document.getElementById("facturaOrdenId").value = ordenId;
+            document.getElementById("facturaOrdenNum").innerText = "#" + ordenId;
+            document.getElementById("facturaMontoTotal").innerText = "S/. " + parseFloat(montoTotal).toFixed(2);
+            document.getElementById("facturaRznSocial").value = clienteNombre || "";
+            document.getElementById("facturaNumDoc").value = clienteDni || "";
+
+            document.getElementById("tipoDocBoleta").checked = true;
+            cambiarTipoDoc();
+
+            new bootstrap.Modal(document.getElementById('modalFacturar')).show();
+        }
+
+        function cambiarTipoDoc() {
+            const esFactura = document.getElementById("tipoDocFactura").checked;
+            const labelDoc = document.getElementById("labelNumDoc");
+            const inputDoc = document.getElementById("facturaNumDoc");
+            const labelRzn = document.getElementById("labelRznSocial");
+            const divDir = document.getElementById("divDireccionFiscal");
+
+            if (esFactura) {
+                labelDoc.innerText = "RUC de la Empresa (11 dígitos)";
+                inputDoc.maxLength = 11;
+                inputDoc.placeholder = "20XXXXXXXXX";
+                labelRzn.innerText = "Razón Social";
+                divDir.classList.remove("d-none");
+            } else {
+                labelDoc.innerText = "DNI del Cliente (8 dígitos / Opcional)";
+                inputDoc.maxLength = 8;
+                inputDoc.placeholder = "Ingrese DNI (Opcional)";
+                labelRzn.innerText = "Nombre del Cliente";
+                divDir.classList.add("d-none");
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // MODAL DE ENTREGA REUTILIZABLE (OOP / DRY)
+        // Maneja dinámicamente Condición 1 (Cobrar y Entregar) y Condición 2 (Entregar)
+        // ─────────────────────────────────────────────────────────────
+        function abrirModalEntrega(id, cliente, deuda) {
+            document.getElementById("hiddenOrdenId").value = id;
+            document.getElementById("modalOrdenNumero").innerText = `#${id}`;
+            document.getElementById("modalClienteNombre").innerText = cliente || "Cliente";
+
+            const divConDeuda = document.getElementById("divConDeuda");
+            const divSinDeuda = document.getElementById("divSinDeuda");
+            const spanMonto = document.getElementById("modalMontoDeuda");
+            const btnConfirmar = document.getElementById("btnConfirmarEntrega");
+
+            const deudaNum = parseFloat(deuda || 0);
+
+            if (deudaNum > 0) {
+                // Caso 1: Tiene deuda pendiente (Condición 1: Cobrar y Entregar)
+                spanMonto.innerText = deudaNum.toFixed(2);
+                divConDeuda.classList.remove("d-none");
+                divSinDeuda.classList.add("d-none");
+                btnConfirmar.className = "btn btn-warning px-4 rounded-pill fw-bold shadow-sm text-dark";
+                btnConfirmar.innerHTML = `<i class="bi bi-cash-coin me-1"></i> Cobrar y Entregar`;
+            } else {
+                // Caso 2: Sin deuda / Pagado por adelantado (Condición 2: Entregar)
+                divConDeuda.classList.add("d-none");
+                divSinDeuda.classList.remove("d-none");
+                btnConfirmar.className = "btn btn-success px-4 rounded-pill fw-bold shadow-sm";
+                btnConfirmar.innerHTML = `<i class="bi bi-box-seam me-1"></i> Confirmar Entrega`;
+            }
+
             var myModal = new bootstrap.Modal(document.getElementById('modalEntrega'));
             myModal.show();
         }

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace AppLavaluc.Models
 {
@@ -9,7 +9,7 @@ namespace AppLavaluc.Models
 
         [Required(ErrorMessage = "El nombre de la categoría es obligatorio")]
         [Display(Name = "Categoría de Servicio")]
-        public string NombreCategoria { get; set; }
+        public string NombreCategoria { get; set; } = string.Empty;
 
         public ICollection<Servicio>? Servicios { get; set; }
     }

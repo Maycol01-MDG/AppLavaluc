@@ -24,25 +24,29 @@
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0 rounded-4 h-100">
                     <div class="card-header bg-white border-0 pt-4 px-4">
-                        <h5 class="fw-bold text-dark"><i class="bi bi-person-lines-fill text-primary me-2"></i> Datos del Cliente</h5>
+                        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-person-lines-fill text-primary me-2"></i> Datos del Cliente</h5>
                     </div>
                     <div class="card-body px-4 pb-4">
+                        <!-- DNI / RUC -->
                         <div class="mb-3">
-                            <label class="form-label small text-uppercase fw-bold text-muted">DNI</label>
-                            <input type="text" id="dniCliente" name="dniCliente" class="form-control bg-light border-0" maxlength="8" inputmode="numeric" placeholder="Ingresa DNI y presiona Enter" />
+                            <label class="form-label small text-uppercase fw-bold text-muted">DNI/ RUC</label>
+                            <input type="text" id="dniCliente" name="dniCliente" class="form-control bg-light border-0" maxlength="11" inputmode="numeric" placeholder="Ingresa DNI/ RUC y presiona Enter" />
                             <div id="dniLookupMessageOrden" class="small mt-1"></div>
                         </div>
 
+                        <!-- Nombres / Razón Social -->
                         <div class="mb-3">
-                            <label class="form-label small text-uppercase fw-bold text-muted">Nombres</label>
+                            <label class="form-label small text-uppercase fw-bold text-muted" id="lblNombreCliente">Nombres/ Razon SOCIAL</label>
                             <input type="text" id="nombreCliente" name="nombreCliente" class="form-control bg-light border-0" placeholder="Ej: Juan Perez" required />
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small text-uppercase fw-bold text-muted">Apellidos</label>
-                            <input type="text" id="apellidosCliente" name="apellidosCliente" class="form-control bg-light border-0" placeholder="Ej: Lopez Garcia" required />
+                        <!-- Apellidos -->
+                        <div class="mb-3" id="divApellidosCliente">
+                            <label class="form-label small text-uppercase fw-bold text-muted" id="lblApellidosCliente">Apellidos</label>
+                            <input type="text" id="apellidosCliente" name="apellidosCliente" class="form-control bg-light border-0" placeholder="Ej: Lopez Garcia" />
                         </div>
 
+                        <!-- Teléfono -->
                         <div class="mb-3">
                             <label class="form-label small text-uppercase fw-bold text-muted">Teléfono</label>
                             <div class="input-group">
@@ -53,6 +57,7 @@
 
                         <hr class="my-4 text-muted opacity-25">
 
+                        <!-- Tipo de Entrega -->
                         <div class="mb-3">
                             <label class="form-label small text-uppercase fw-bold text-muted">Tipo de Entrega</label>
                             <div class="d-flex gap-3">
@@ -69,6 +74,16 @@
                                     </label>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Dirección: SOLO aparece si es Factura (RUC) o si se selecciona Delivery -->
+                        <div class="mb-3 d-none" id="divDireccionCliente">
+                            <label class="form-label small text-uppercase fw-bold text-muted" id="lblDireccionCliente">Dirección</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bi bi-geo-alt text-danger"></i></span>
+                                <input type="text" id="direccionCliente" name="direccionCliente" class="form-control bg-light border-0" placeholder="Ingrese dirección" />
+                            </div>
+                            <small class="text-muted small" id="hintDireccion"></small>
                         </div>
 
                         <div class="mb-3">
@@ -172,12 +187,16 @@
                                         <span>Saldo Pendiente:</span>
                                         <span class="fw-bold text-danger fs-6">S/. <span id="saldoPendienteDisplay">0.00</span></span>
                                     </div>
+                                    <div class="d-flex justify-content-between text-muted small px-2 mt-2 pt-2 border-top">
+                                        <span>Comprobante SUNAT:</span>
+                                        <span class="fw-bold text-primary" id="resumenTipoComprobante">📄 Boleta de Venta (B001)</span>
+                                    </div>
                                 </div>
                                 <div class="col-md-6 text-end">
                                     <p class="text-muted mb-0 small text-uppercase fw-bold">Total a Pagar</p>
                                     <h1 class="display-4 fw-bold text-primary mb-3">S/. <span id="totalGeneralDisplay">0.00</span></h1>
 
-                                    <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-scale w-100">
+                                    <button type="submit" id="btnFinalizarOrden" class="btn btn-primary btn-lg rounded-pill px-5 shadow hover-scale w-100">
                                         <i class="bi bi-check-lg me-2"></i> Finalizar Orden
                                     </button>
                                 </div>
@@ -188,6 +207,8 @@
             </div>
         </div>
 
+        <input type="hidden" id="hiddenTipoComprobante" name="tipoComprobante" value="03" />
+        <input type="hidden" id="hiddenEmitirComprobante" name="emitirComprobante" value="true" />
         <input type="hidden" id="hiddenServicioIds" name="servicioIds" />
         <input type="hidden" id="hiddenCantidades" name="cantidades" />
         <input type="hidden" id="hiddenDescuentos" name="descuentos" />
@@ -285,43 +306,135 @@
 
     <script>
         let detalles = [];
-        const endpointBuscarDni = '@Url.Action("BuscarDni", "Cliente")';
+        const endpointBuscarDocumento = '@Url.Action("BuscarDocumento", "Cliente")';
 
         const setDniMessageOrden = (text, isError) => {
             const el = $("#dniLookupMessageOrden");
             el.text(text);
-            el.removeClass("text-danger text-success");
+            el.removeClass("text-danger text-success text-muted");
+            if (!text) return;
             el.addClass(isError ? "text-danger" : "text-success");
         };
 
-        $("#dniCliente").on("keydown", async function (event) {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
+        // Control de visibilidad de Dirección (SOLO para Factura o si es Delivery)
+        function actualizarVisibilidadDireccion() {
+            const doc = ($("#dniCliente").val() || "").trim().replace(/\D/g, "");
+            const esFactura = doc.length === 11 || $("#hiddenTipoComprobante").val() === "01";
+            const esDelivery = $("#tipoDelivery").is(":checked");
 
-            const dni = ($(this).val() || "").trim();
-            if (!/^\d{8}$/.test(dni)) {
-                setDniMessageOrden("El DNI debe tener 8 dígitos.", true);
+            if (esFactura) {
+                $("#divDireccionCliente").removeClass("d-none");
+                $("#lblDireccionCliente").html('Dirección Fiscal <span class="text-danger">*</span>');
+                $("#direccionCliente").attr("placeholder", "Ej: Av. Las Begonias 450, San Isidro");
+                $("#hintDireccion").text("Obligatorio para la Factura Electrónica (SUNAT).");
+            } else if (esDelivery) {
+                $("#divDireccionCliente").removeClass("d-none");
+                $("#lblDireccionCliente").html('Dirección de Delivery <span class="text-danger">*</span>');
+                $("#direccionCliente").attr("placeholder", "Ej: Jr. Los Pinos 123, Urb. Primavera");
+                $("#hintDireccion").text("Dirección donde se entregará el pedido.");
+            } else {
+                // Para persona con Boleta y Recojo en tienda: OCULTAR DIRECCIÓN
+                $("#divDireccionCliente").addClass("d-none");
+                $("#hintDireccion").text("");
+            }
+        }
+
+        // Cambio de modo de comprobante (Boleta o Factura)
+        function aplicarModoComprobante(modo) {
+            const esFactura = modo === "01";
+
+            if (esFactura) {
+                $("#hiddenTipoComprobante").val("01");
+                $("#lblNombreCliente").html('Nombres/ Razon SOCIAL <span class="text-danger">*</span>');
+                $("#nombreCliente").attr("placeholder", "Ej: AGROINVERSIONES AJINOR S.R.L.");
+                $("#divApellidosCliente").addClass("d-none");
+                $("#apellidosCliente").val("");
+                $("#resumenTipoComprobante")
+                    .html('🏢 Factura (F001)')
+                    .removeClass("text-primary")
+                    .addClass("text-dark");
+            } else {
+                $("#hiddenTipoComprobante").val("03");
+                $("#lblNombreCliente").html('Nombres/ Razon SOCIAL <span class="text-danger">*</span>');
+                $("#nombreCliente").attr("placeholder", "Ej: Juan Perez");
+                $("#divApellidosCliente").removeClass("d-none");
+                $("#resumenTipoComprobante")
+                    .html('📄 Boleta (B001)')
+                    .removeClass("text-dark")
+                    .addClass("text-primary");
+            }
+
+            actualizarVisibilidadDireccion();
+        }
+
+        // Detectar cambio de Tipo de Entrega (En Tienda vs Delivery)
+        $('input[name="tipoEntrega"]').on("change", function () {
+            actualizarVisibilidadDireccion();
+        });
+
+        // Auto-detección automática al ingresar DNI o RUC
+        $("#dniCliente").on("input", function () {
+            let val = $(this).val().replace(/\D/g, "");
+            $(this).val(val);
+
+            if (val.length === 8) {
+                aplicarModoComprobante("03");
+                setDniMessageOrden("DNI detectado (8 dígitos) -> Generará Boleta", false);
+            } else if (val.length === 11) {
+                aplicarModoComprobante("01");
+                setDniMessageOrden("RUC detectado (11 dígitos) -> Generará Factura", false);
+            } else if (val.length > 0) {
+                setDniMessageOrden(`Dígitos: ${val.length} (DNI: 8, RUC: 11)`, false);
+                actualizarVisibilidadDireccion();
+            } else {
+                setDniMessageOrden("", false);
+                aplicarModoComprobante("03");
+            }
+        });
+
+        // Búsqueda del documento en base de datos o RENIEC al presionar Enter
+        async function buscarDocumentoCliente() {
+            const doc = ($("#dniCliente").val() || "").trim().replace(/\D/g, "");
+            if (doc.length !== 8 && doc.length !== 11) {
+                setDniMessageOrden("Ingrese un DNI (8 dígitos) o RUC (11 dígitos).", true);
                 return;
             }
 
-            setDniMessageOrden("Consultando RENIEC...", false);
+            setDniMessageOrden("Consultando información...", false);
 
             try {
-                const response = await fetch(`${endpointBuscarDni}?dni=${encodeURIComponent(dni)}`, {
+                const response = await fetch(`${endpointBuscarDocumento}?documento=${encodeURIComponent(doc)}`, {
                     headers: { "Accept": "application/json" }
                 });
                 const data = await response.json();
 
                 if (!response.ok) {
-                    setDniMessageOrden(data?.mensaje || "No se pudo consultar el DNI.", true);
+                    setDniMessageOrden(data?.mensaje || "No se pudo consultar el documento.", true);
                     return;
                 }
 
-                $("#nombreCliente").val(data.nombre || "");
-                $("#apellidosCliente").val(data.apellidos || "");
-                setDniMessageOrden("Datos del cliente completados correctamente.", false);
+                if (data.tipoDoc) {
+                    aplicarModoComprobante(data.tipoDoc);
+                }
+
+                if (data.encontrado) {
+                    $("#nombreCliente").val(data.nombre || "");
+                    $("#apellidosCliente").val(data.apellidos || "");
+                    if (data.telefono) $("#telefonoCliente").val(data.telefono);
+                    if (data.direccion) $("#direccionCliente").val(data.direccion);
+                    setDniMessageOrden(data.mensaje || "Datos cargados correctamente.", false);
+                } else {
+                    setDniMessageOrden(data.mensaje || "Documento nuevo. Complete los datos requeridos.", false);
+                }
             } catch {
-                setDniMessageOrden("Error de conexión al consultar RENIEC.", true);
+                setDniMessageOrden("Error de conexión al consultar el documento.", true);
+            }
+        }
+
+        $("#dniCliente").on("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                buscarDocumentoCliente();
             }
         });
 
@@ -367,7 +480,10 @@
         // 2. BUSCADOR
         $("#buscarServicio").on("keyup", function () {
             const texto = $(this).val().toLowerCase();
-            $(".servicio-row").toggle($(this).data("nombre").includes(texto));
+            $(".servicio-row").each(function () {
+                const nombre = ($(this).data("nombre") || "").toString().toLowerCase();
+                $(this).toggle(nombre.includes(texto));
+            });
         });
 
         // 3. MODAL Y CÁLCULOS
@@ -457,12 +573,57 @@
             $("#saldoPendienteDisplay").text(saldo.toFixed(2));
         });
 
-        // 7. ENVIAR FORMULARIO
-        $("#formOrden").submit(function (e) {
+        // 7. ENVIAR FORMULARIO CON IMPRESIÓN DIRECTA EN TICKETERA (SIN PREVISUALIZAR)
+        $("#formOrden").submit(async function (e) {
+            e.preventDefault();
+
             if (detalles.length === 0) {
-                e.preventDefault();
                 alert("⚠️ Debe agregar al menos un servicio para guardar la orden.");
                 return;
+            }
+
+            const tipoComprobante = $("#hiddenTipoComprobante").val();
+            const doc = ($("#dniCliente").val() || "").trim().replace(/\D/g, "");
+            const esDelivery = $("#tipoDelivery").is(":checked");
+
+            if (tipoComprobante === "01") { // FACTURA
+                if (doc.length !== 11) {
+                    alert("⚠️ Para emitir Factura, el RUC debe tener 11 dígitos numéricos.");
+                    $("#dniCliente").focus();
+                    return;
+                }
+                const nombre = ($("#nombreCliente").val() || "").trim();
+                if (!nombre) {
+                    alert("⚠️ Ingrese la Razón Social de la empresa.");
+                    $("#nombreCliente").focus();
+                    return;
+                }
+                const direccion = ($("#direccionCliente").val() || "").trim();
+                if (!direccion) {
+                    alert("⚠️ La Dirección Fiscal es requerida por SUNAT para emitir Factura.");
+                    $("#direccionCliente").focus();
+                    return;
+                }
+            } else { // BOLETA
+                if (doc.length > 0 && doc.length !== 8) {
+                    alert("⚠️ El DNI debe tener 8 dígitos numéricos.");
+                    $("#dniCliente").focus();
+                    return;
+                }
+                const nombre = ($("#nombreCliente").val() || "").trim();
+                if (!nombre) {
+                    alert("⚠️ Ingrese el nombre del cliente.");
+                    $("#nombreCliente").focus();
+                    return;
+                }
+                if (esDelivery) {
+                    const direccion = ($("#direccionCliente").val() || "").trim();
+                    if (!direccion) {
+                        alert("⚠️ Ingrese la dirección para el servicio de Delivery.");
+                        $("#direccionCliente").focus();
+                        return;
+                    }
+                }
             }
 
             $("#hiddenServicioIds").val(detalles.map(d => d.id).join(","));
@@ -478,6 +639,49 @@
             $("#hiddenMontoPagado").val(pagado);
             $("#hiddenSaldoPendiente").val(total - pagado);
             $("#hiddenEstadoPago").val(estadoPago);
+
+            // Bloquear botón y dar feedback visual
+            const $btn = $("#btnFinalizarOrden");
+            const btnOriginalText = $btn.html();
+            $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Guardando e Imprimiendo...');
+
+            try {
+                const formData = new FormData(this);
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    let errMsg = "Error del servidor al registrar orden.";
+                    try {
+                        const errData = await response.json();
+                        if (errData?.message) errMsg = errData.message;
+                    } catch {}
+                    alert("❌ " + errMsg);
+                    $btn.prop("disabled", false).html(btnOriginalText);
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data && data.success) {
+                    // La impresión física en la ticketera (XP-80) se ejecuta directamente en el backend (ESC/POS RAW)
+                    // sin abrir ninguna ventana de previsualización en el navegador
+                    window.location.href = data.redirectUrl || '@Url.Action("Index", "Orden")';
+                } else {
+                    alert("⚠️ " + (data?.message || "No se pudo procesar la orden."));
+                    $btn.prop("disabled", false).html(btnOriginalText);
+                }
+            } catch (err) {
+                console.error("Error al procesar:", err);
+                // Si la llamada AJAX falla por conectividad, fallback al submit normal
+                this.submit();
+            }
         });
     </script>
 }

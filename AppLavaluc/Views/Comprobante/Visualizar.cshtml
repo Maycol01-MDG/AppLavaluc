@@ -1,0 +1,332 @@
+@model AppLavaluc.Models.Comprobante
+@{
+    ViewData["Title"] = $"Visualizar {Model.TipoDocDescripcion} {Model.NumeroCompleto}";
+    Layout = null; // Vista independiente sin interferencias de layouts para máxima fidelidad visual y de impresión
+
+    var htmlContenido = ViewBag.HtmlContenido as string;
+    var pdfBase64 = ViewBag.PdfBytes as string;
+    var autoDownload = (bool)(ViewBag.AutoDownload ?? false);
+    var nombrePdf = (ViewBag.NombrePdf as string) ?? $"{Model.NumeroCompleto}.pdf";
+    var nombreXml = (ViewBag.NombreXml as string) ?? $"{Model.NumeroCompleto}.xml";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - LAVALUC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #1e293b;
+        }
+
+        /* Barra de control superior ejecutiva */
+        .viewer-navbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 1050;
+            padding: 10px 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        }
+
+        .doc-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 50rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Contenedor tipo papel A4 ajustado */
+        .sheet-container {
+            max-width: 820px;
+            margin: 15px auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+            border-radius: 8px;
+            padding: 15px 20px;
+            min-height: auto;
+        }
+
+        /* En modo impresión ocultamos controles */
+        @@media print {
+            body {
+                background-color: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .viewer-navbar, .no-print {
+                display: none !important;
+            }
+            .sheet-container {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. BARRA SUPERIOR EJECUTIVA -->
+    <header class="viewer-navbar d-flex flex-wrap align-items-center justify-content-between gap-3 no-print">
+        <div class="d-flex align-items-center gap-3">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1">
+                <i class="bi bi-arrow-left"></i>
+                <span>Volver</span>
+            </a>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-6 fw-bold text-dark mb-0">@Model.TipoDocDescripcion @Model.NumeroCompleto</span>
+                    @if (Model.EstadoSunat == "Aceptado")
+                    {
+                        <span class="doc-badge-pill bg-success-subtle text-success border border-success-subtle">
+                            <i class="bi bi-check-circle-fill"></i> Aceptado SUNAT
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="doc-badge-pill bg-secondary-subtle text-secondary border">
+                            @Model.EstadoSunat
+                        </span>
+                    }
+                </div>
+                <small class="text-muted">
+                    Cliente: <strong>@(Model.RznSocialCliente ?? "Clientes Varios")</strong> | Doc: @(Model.NumDocCliente ?? "-") | Emisión: @Model.FechaEmision.ToString("dd/MM/yyyy HH:mm")
+                </small>
+            </div>
+        </div>
+
+        <!-- ACCIONES DE DOCUMENTO -->
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" onclick="imprimirDocumento()" class="btn btn-outline-dark btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                <i class="bi bi-printer-fill text-secondary"></i>
+                <span>Imprimir</span>
+            </button>
+            <button type="button" onclick="descargarComoPdf()" id="btnDescargarPdf" class="btn btn-danger btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+                <span>Descargar PDF</span>
+            </button>
+            <a asp-action="DescargarXml" asp-route-id="@Model.ComprobanteID" class="btn btn-outline-teal btn-sm rounded-pill px-3 border text-success d-inline-flex align-items-center gap-1 shadow-sm">
+                <i class="bi bi-file-earmark-code-fill"></i>
+                <span>XML UBL 2.1</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- NOTIFICACIÓN DE ESTADO AUTOMÁTICA -->
+    <div id="statusToast" class="alert alert-info py-2 px-3 mx-auto mt-3 shadow-sm border-0 rounded-pill d-none text-center" style="max-width: 500px;">
+        <span id="statusMessage"><i class="bi bi-hourglass-split me-1"></i> Generando archivo PDF...</span>
+    </div>
+
+    <!-- 2. VISOR DEL COMPROBANTE -->
+    <main class="container-fluid py-2">
+        <div class="sheet-container" id="documento-impresion">
+            @if (!string.IsNullOrWhiteSpace(htmlContenido))
+            {
+                <!-- Representación Oficial Greenter / HTML de la API -->
+                @Html.Raw(htmlContenido)
+            }
+            else if (!string.IsNullOrWhiteSpace(pdfBase64))
+            {
+                <!-- Objeto embebido PDF binario -->
+                <object data="data:application/pdf;base64,@pdfBase64" type="application/pdf" width="100%" height="950px">
+                    <p class="text-center text-muted p-5">
+                        El navegador no puede previsualizar el PDF directamente.
+                        <a href="data:application/pdf;base64,@pdfBase64" download="@nombrePdf" class="btn btn-primary btn-sm ms-2">Descargar PDF</a>
+                    </p>
+                </object>
+            }
+            else
+            {
+                <!-- Plantilla Local de Respaldo Limpia y Completa -->
+                <div class="p-3">
+                    <div class="row mb-4">
+                        <div class="col-7">
+                            @if (!string.IsNullOrEmpty(ViewBag.CustomLogoBase64 as string))
+                            {
+                                <img src="@ViewBag.CustomLogoBase64" alt="Logo Empresa" class="mb-2 d-block" style="max-height: 155px; max-width: 360px; width: auto; height: auto; object-fit: contain;" />
+                            }
+                            else if (System.IO.File.Exists(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "imagenes", "logo_empresa.png")))
+                            {
+                                <img src="/imagenes/logo_empresa.png" alt="Logo Empresa" class="mb-2 d-block" style="max-height: 155px; max-width: 360px; width: auto; height: auto; object-fit: contain;" />
+                            }
+                            <h4 class="fw-bold text-dark mb-1">@(Model.RazonSocialEmisor ?? "LAVALUC S.A.C.")</h4>
+                            <p class="text-muted small mb-1">RUC: @(Model.RucEmisor ?? "10708464100")</p>
+                            <p class="text-muted small mb-1">Dirección: Jr. Apurímac 654, Cajamarca</p>
+                            <p class="text-muted small mb-0">Lavandería & Tintorería Profesional</p>
+                        </div>
+                        <div class="col-5">
+                            <div class="border border-2 border-dark rounded-3 p-3 text-center">
+                                <h6 class="fw-bold mb-1">R.U.C. @Model.RucEmisor</h6>
+                                <div class="bg-dark text-white fw-bold py-1 px-2 my-1 rounded text-uppercase" style="font-size: 0.85rem;">
+                                    @Model.TipoDocDescripcion
+                                </div>
+                                <h5 class="fw-bold mb-0">N° @Model.NumeroCompleto</h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded p-3 mb-4 bg-light">
+                        <div class="row g-2 small">
+                            <div class="col-6"><strong>Señor(es):</strong> @(Model.RznSocialCliente ?? "Clientes Varios")</div>
+                            <div class="col-6"><strong>@(Model.TipoDocCliente == "6" ? "RUC" : "DNI"):</strong> @(Model.NumDocCliente ?? "-")</div>
+                            <div class="col-6"><strong>Dirección:</strong> @(Model.DireccionCliente ?? "-")</div>
+                            <div class="col-6"><strong>Fecha de Emisión:</strong> @Model.FechaEmision.ToString("dd/MM/yyyy HH:mm")</div>
+                            <div class="col-6"><strong>Moneda:</strong> SOLES (PEN)</div>
+                            <div class="col-6"><strong>Forma de Pago:</strong> Contado</div>
+                        </div>
+                    </div>
+
+                    <table class="table table-bordered table-sm mb-4">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th style="width: 60px;">Cant.</th>
+                                <th style="width: 80px;">Unidad</th>
+                                <th>Descripción del Servicio</th>
+                                <th style="width: 120px;">V. Unitario</th>
+                                <th style="width: 120px;">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Orden?.Detalles != null && Model.Orden.Detalles.Any())
+                            {
+                                foreach (var d in Model.Orden.Detalles)
+                                {
+                                    var vUnit = d.PrecioUnitario / 1.18m;
+                                    var vTotal = vUnit * d.Cantidad;
+                                    <tr>
+                                        <td class="text-center">@d.Cantidad</td>
+                                        <td class="text-center">NIU</td>
+                                        <td>@(d.Servicio?.NombreServicio ?? "Servicio de Lavandería")</td>
+                                        <td class="text-end">S/. @vUnit.ToString("F2")</td>
+                                        <td class="text-end">S/. @vTotal.ToString("F2")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td class="text-center">1</td>
+                                    <td class="text-center">NIU</td>
+                                    <td>Servicio de Lavandería y Tintorería</td>
+                                    <td class="text-end">S/. @Model.MontoOperacionesGravadas.ToString("F2")</td>
+                                    <td class="text-end">S/. @Model.MontoOperacionesGravadas.ToString("F2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <div class="row">
+                        <div class="col-7 text-center">
+                            @{
+                                var qrContent = $"{Model.RucEmisor}|{Model.TipoDoc}|{Model.Serie}|{Model.Correlativo}|{Model.MontoIgv:F2}|{Model.MontoTotal:F2}|{Model.FechaEmision:yyyy-MM-dd}|{Model.TipoDocCliente}|{Model.NumDocCliente}";
+                                var qrUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={Uri.EscapeDataString(qrContent)}";
+                            }
+                            <img src="@qrUrl" alt="QR SUNAT" class="img-fluid border p-1 rounded mb-2" style="width: 110px; height: 110px;" />
+                            <p class="text-muted" style="font-size: 0.7rem;">Representación impresa del Comprobante de Pago Electrónico.</p>
+                            @if (!string.IsNullOrEmpty(Model.HashCdr))
+                            {
+                                <p class="text-muted font-monospace" style="font-size: 0.65rem;">Hash: @Model.HashCdr</p>
+                            }
+                        </div>
+                        <div class="col-5">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-end">Op. Gravadas:</td>
+                                    <td class="text-end fw-semibold">S/. @Model.MontoOperacionesGravadas.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-end">I.G.V. (18%):</td>
+                                    <td class="text-end fw-semibold">S/. @Model.MontoIgv.ToString("N2")</td>
+                                </tr>
+                                <tr class="border-top border-dark">
+                                    <td class="text-end fw-bold fs-6">IMPORTE TOTAL:</td>
+                                    <td class="text-end fw-bold fs-6 text-primary">S/. @Model.MontoTotal.ToString("N2")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </main>
+
+    <script>
+        function imprimirDocumento() {
+            window.print();
+        }
+
+        function descargarComoPdf() {
+            const btn = document.getElementById('btnDescargarPdf');
+            const toast = document.getElementById('statusToast');
+            const msg = document.getElementById('statusMessage');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generando PDF...';
+            }
+            if (toast) {
+                toast.classList.remove('d-none');
+                msg.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Procesando representación gráfica a PDF...';
+            }
+
+            const element = document.getElementById('documento-impresion');
+            const opt = {
+                margin: [4, 6, 4, 6],
+                filename: '@nombrePdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css'] }
+            };
+
+            html2pdf().set(opt).from(element).save()
+                .then(() => {
+                    if (toast) {
+                        toast.className = 'alert alert-success py-2 px-3 mx-auto mt-3 shadow-sm border-0 rounded-pill text-center';
+                        msg.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> PDF generado y descargado con éxito.';
+                        setTimeout(() => toast.classList.add('d-none'), 4000);
+                    }
+                })
+                .catch((err) => {
+                    console.error('Error generando PDF:', err);
+                    if (toast) {
+                        toast.className = 'alert alert-danger py-2 px-3 mx-auto mt-3 shadow-sm border-0 rounded-pill text-center';
+                        msg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> No se pudo generar el PDF: ' + err;
+                    }
+                })
+                .finally(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-file-earmark-pdf-fill"></i> <span>Descargar PDF</span>';
+                    }
+                });
+        }
+
+        // Si se solicitó descarga automática (redirección transparente desde DescargarPdf)
+        document.addEventListener('DOMContentLoaded', () => {
+            const autoDownload = @(autoDownload ? "true" : "false");
+            if (autoDownload) {
+                setTimeout(() => {
+                    descargarComoPdf();
+                }, 600);
+            }
+        });
+    </script>
+</body>
+</html>

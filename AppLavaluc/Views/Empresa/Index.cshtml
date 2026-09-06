@@ -1,0 +1,291 @@
+@model AppLavaluc.Models.EmpresaViewModel
+@{
+    ViewData["Title"] = "Datos de Empresa y Logo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .empresa-header-badge {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        background: #0f172a;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    }
+
+    .card-settings {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .logo-preview-box {
+        width: 100%;
+        height: 180px;
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+        transition: border-color 0.2s ease;
+    }
+
+    .logo-preview-box:hover {
+        border-color: #3b82f6;
+    }
+
+    .logo-preview-img {
+        max-width: 90%;
+        max-height: 160px;
+        object-fit: contain;
+    }
+
+    .btn-file-upload {
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .btn-file-upload input[type=file] {
+        position: absolute;
+        top: 0;
+        right: 0;
+        min-width: 100%;
+        min-height: 100%;
+        font-size: 100px;
+        text-align: right;
+        opacity: 0;
+        outline: none;
+        cursor: pointer;
+        display: block;
+    }
+</style>
+
+<div class="container-fluid px-3 px-xl-4 py-3">
+
+    <!-- 1. ENCABEZADO -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+            <div class="empresa-header-badge">
+                <i class="bi bi-building-gear fs-3"></i>
+            </div>
+            <div>
+                <h3 class="fw-bold text-dark mb-0">Configuración de Empresa y Logo</h3>
+                <p class="text-muted small mb-0">Gestiona los datos fiscales y el logotipo oficial que aparecerá en tus facturas y comprobantes SUNAT.</p>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a asp-controller="Comprobante" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 d-inline-flex align-items-center gap-1">
+                <i class="bi bi-arrow-left"></i>
+                <span>Ver Comprobantes</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. ALERTAS DE SISTEMA -->
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center mb-4 p-3" role="alert">
+            <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+            <div class="small fw-semibold">@TempData["Mensaje"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm d-flex align-items-center mb-4 p-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill text-danger fs-5 me-2"></i>
+            <div class="small fw-semibold">@TempData["Error"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- 3. FORMULARIO PRINCIPAL -->
+    <form asp-action="Guardar" method="post" enctype="multipart/form-data" class="row g-4">
+        @Html.AntiForgeryToken()
+
+        <!-- COLUMNA IZQUIERDA: LOGOTIPO OFICIAL -->
+        <div class="col-12 col-lg-4">
+            <div class="card card-settings h-100">
+                <div class="card-header bg-white border-bottom p-3">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <i class="bi bi-image text-primary me-2"></i>Logotipo de la Empresa
+                    </h6>
+                    <small class="text-muted">Imagen que se imprime en las facturas y boletas</small>
+                </div>
+                <div class="card-body p-4 text-center d-flex flex-column align-items-center justify-content-between">
+                    <!-- ÁREA DE VISTA PREVIA -->
+                    <div class="logo-preview-box mb-3" id="previewContainer">
+                        @if (Model.TieneLogo && !string.IsNullOrEmpty(Model.LogoUrl))
+                        {
+                            <img src="@Model.LogoUrl" alt="Logo Empresa" class="logo-preview-img" id="imgLogoPreview" />
+                        }
+                        else
+                        {
+                            <div id="noLogoPlaceholder" class="text-muted p-3">
+                                <i class="bi bi-cloud-arrow-up text-secondary fs-1 d-block mb-1"></i>
+                                <span class="small fw-semibold d-block">Sin logotipo cargado</span>
+                                <span class="text-secondary" style="font-size: 0.72rem;">PNG, JPG o WEBP recomendado</span>
+                            </div>
+                            <img src="" alt="Logo Preview" class="logo-preview-img d-none" id="imgLogoPreview" />
+                        }
+                    </div>
+
+                    <!-- BOTÓN PARA SELECCIONAR ARCHIVO -->
+                    <div class="w-100 mb-3">
+                        <label class="btn btn-outline-dark btn-sm rounded-pill w-100 btn-file-upload py-2 shadow-sm">
+                            <i class="bi bi-upload me-1"></i>
+                            <span id="txtBtnFile">Seleccionar Nuevo Logo...</span>
+                            <input type="file" name="LogoFile" id="inputLogoFile" accept="image/png, image/jpeg, image/webp" />
+                        </label>
+                        <span asp-validation-for="LogoFile" class="text-danger small d-block mt-1"></span>
+                    </div>
+
+                    <div class="alert alert-light border small text-muted text-start mb-0 p-2" style="font-size: 0.75rem;">
+                        <i class="bi bi-info-circle text-primary me-1"></i>
+                        <strong>Consejo:</strong> Para que encuadre perfectamente en la factura A4, utiliza una imagen con fondo transparente (PNG) y orientación horizontal.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: DATOS FISCALES -->
+        <div class="col-12 col-lg-8">
+            <div class="card card-settings">
+                <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0">
+                            <i class="bi bi-card-checklist text-primary me-2"></i>Datos Fiscales y de Facturación
+                        </h6>
+                        <small class="text-muted">Información legal registrada ante SUNAT</small>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded small">
+                        Catálogo SUNAT
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <!-- RUC -->
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Ruc" class="form-label small text-muted fw-semibold">Número de RUC</label>
+                            <input asp-for="Ruc" class="form-control form-control-sm font-monospace fw-bold" placeholder="10708464100" maxlength="11" required />
+                            <span asp-validation-for="Ruc" class="text-danger small"></span>
+                        </div>
+
+                        <!-- NOMBRE COMERCIAL -->
+                        <div class="col-12 col-md-6">
+                            <label asp-for="NombreComercial" class="form-label small text-muted fw-semibold">Nombre Comercial</label>
+                            <input asp-for="NombreComercial" class="form-control form-control-sm" placeholder="Ej: LAVALUC" />
+                            <span asp-validation-for="NombreComercial" class="text-danger small"></span>
+                        </div>
+
+                        <!-- RAZÓN SOCIAL -->
+                        <div class="col-12">
+                            <label asp-for="RazonSocial" class="form-label small text-muted fw-semibold">Razón Social Oficial</label>
+                            <input asp-for="RazonSocial" class="form-control form-control-sm fw-semibold" placeholder="Ej: MONDRAGON DELGADO MAYCOL" required />
+                            <span asp-validation-for="RazonSocial" class="text-danger small"></span>
+                        </div>
+
+                        <!-- DIRECCIÓN FISCAL -->
+                        <div class="col-12">
+                            <label asp-for="Direccion" class="form-label small text-muted fw-semibold">Dirección Fiscal de Emisión</label>
+                            <input asp-for="Direccion" class="form-control form-control-sm" placeholder="Ej: Av. Villa Nueva 221 / Jr. Apurímac 654" required />
+                            <span asp-validation-for="Direccion" class="text-danger small"></span>
+                        </div>
+
+                        <!-- UBIGEO -->
+                        <div class="col-6 col-md-3">
+                            <label asp-for="Ubigeo" class="form-label small text-muted fw-semibold">Ubigeo (6 dígitos)</label>
+                            <input asp-for="Ubigeo" class="form-control form-control-sm font-monospace" placeholder="150101" maxlength="6" />
+                        </div>
+
+                        <!-- DEPARTAMENTO -->
+                        <div class="col-6 col-md-3">
+                            <label asp-for="Departamento" class="form-label small text-muted fw-semibold">Departamento</label>
+                            <input asp-for="Departamento" class="form-control form-control-sm" placeholder="LIMA" />
+                        </div>
+
+                        <!-- PROVINCIA -->
+                        <div class="col-6 col-md-3">
+                            <label asp-for="Provincia" class="form-label small text-muted fw-semibold">Provincia</label>
+                            <input asp-for="Provincia" class="form-control form-control-sm" placeholder="LIMA" />
+                        </div>
+
+                        <!-- DISTRITO -->
+                        <div class="col-6 col-md-3">
+                            <label asp-for="Distrito" class="form-label small text-muted fw-semibold">Distrito</label>
+                            <input asp-for="Distrito" class="form-control form-control-sm" placeholder="LIMA" />
+                        </div>
+
+                        <!-- SECCIÓN CREDENCIALES SOL -->
+                        <div class="col-12 pt-3 border-top mt-4">
+                            <h6 class="fw-bold text-dark mb-2">
+                                <i class="bi bi-key-fill text-warning me-2"></i>Credenciales SOL SUNAT (API Greenter)
+                            </h6>
+                            <p class="text-muted small mb-3">Utilizadas para firmar digitalmente y enviar comprobantes UBL 2.1.</p>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label asp-for="SolUser" class="form-label small text-muted fw-semibold">Usuario Secundario SOL</label>
+                            <input asp-for="SolUser" class="form-control form-control-sm" placeholder="prueba" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label asp-for="SolPass" class="form-label small text-muted fw-semibold">Clave SOL</label>
+                            <input asp-for="SolPass" type="password" class="form-control form-control-sm" placeholder="••••••••" />
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <a asp-controller="Comprobante" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-4">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-dark btn-sm rounded-pill px-4 fw-semibold shadow-sm d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-check-lg"></i>
+                            <span>Guardar Datos y Actualizar Logo</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('inputLogoFile');
+            const preview = document.getElementById('imgLogoPreview');
+            const placeholder = document.getElementById('noLogoPlaceholder');
+            const txtBtn = document.getElementById('txtBtnFile');
+
+            if (input) {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        txtBtn.textContent = file.name;
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            preview.src = evt.target.result;
+                            preview.classList.remove('d-none');
+                            if (placeholder) {
+                                placeholder.classList.add('d-none');
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
+    </script>
+}

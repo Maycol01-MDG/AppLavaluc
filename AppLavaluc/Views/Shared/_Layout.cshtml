@@ -17,301 +17,407 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
 
     <style>
-        body {
+        /* RESET & MASTER 100VH LAYOUT */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Evita doble barra de desplazamiento */
             font-family: 'Poppins', sans-serif;
-            background-color: #f4f6f9; /* Fondo gris suave para el body */
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            background-color: #f4f6f9;
         }
 
-        /* Navbar con degradado elegante */
+        /* 1. CONTENEDOR RAÍZ 100VH */
+        .app-layout-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* 2. NAVBAR SUPERIOR (100% ancho) */
+        .app-topbar {
+            flex-shrink: 0;
+            width: 100%;
+            z-index: 1030;
+        }
+
         .navbar-custom {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            padding: 0.8rem 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            padding: 0.75rem 1.25rem;
+            width: 100%;
         }
 
         .navbar-brand {
             font-weight: 700;
             letter-spacing: 1px;
-            font-size: 1.5rem;
+            font-size: 1.45rem;
         }
 
-        /* Enlaces del menú con efecto hover */
         .nav-link {
             font-weight: 500;
             color: rgba(255,255,255,0.85) !important;
-            transition: all 0.3s ease;
-            border-radius: 5px;
-            margin: 0 5px;
+            transition: all 0.25s ease;
+            border-radius: 6px;
+            margin: 0 3px;
+            padding: 0.4rem 0.75rem !important;
         }
 
-            .nav-link:hover, .nav-link.active {
-                color: #fff !important;
-                background-color: rgba(255,255,255,0.15);
-                transform: translateY(-2px);
-            }
-
-            .nav-link i {
-                margin-right: 5px;
-            }
-
-        /* Contenedor Principal (Efecto Tarjeta) */
-        .cuerpo-principal {
-            flex: 1; /* Empuja el footer hacia abajo */
+        .nav-link:hover, .nav-link.active {
+            color: #fff !important;
+            background-color: rgba(255,255,255,0.18);
+            transform: translateY(-1px);
         }
 
+        .nav-link i {
+            margin-right: 5px;
+        }
+
+        .btn-logout {
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            border-radius: 20px;
+            padding: 0.35rem 1.1rem;
+            transition: all 0.25s;
+        }
+
+        .btn-logout:hover {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        /* 3. CONTENEDOR INFERIOR FLEX (Ocupa todo el alto restante debajo del navbar) */
+        .app-body-flex {
+            display: flex;
+            flex: 1 1 auto;
+            min-height: 0; /* CRÍTICO: permite a los hijos scrollear sin desbordar el viewport */
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* 4. SIDEBAR IZQUIERDO (Ancho fijo, NO position fixed, scroll independiente) */
+        .app-sidebar {
+            width: 255px;
+            min-width: 255px;
+            max-width: 255px;
+            flex-shrink: 0;
+            height: 100%;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1.25rem 0 2rem 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.03);
+            z-index: 1010;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.72rem;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            padding: 0 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 10px 22px;
+            color: #475569;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.92rem;
+            border-radius: 0 25px 25px 0;
+            margin-right: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            padding-left: 28px;
+            font-weight: 600;
+        }
+
+        .sidebar-link i {
+            font-size: 1.15rem;
+            margin-right: 12px;
+            width: 22px;
+            text-align: center;
+        }
+
+        /* 5. CONTENEDOR PRINCIPAL DERECHO (flex-grow: 1, ocupa 100% ancho y alto restante) */
+        .app-main-content {
+            flex: 1 1 0%;
+            min-width: 0; /* CRÍTICO: Previene que tablas anchas rompan el contenedor flex */
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 1.25rem 1.75rem;
+            background-color: #f8fafc;
+        }
+
+        .app-view-container {
+            flex: 1 0 auto;
+            width: 100%;
+        }
+
+        /* Estilo tarjeta para vistas regulares vs vistas fluidas como la tabla de Órdenes */
         .main-card {
             background-color: #ffffff;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            border: 1px solid rgba(0,0,0,0.02);
-            padding: 2rem;
-            margin-top: 2rem;
-            margin-bottom: 2rem;
-            animation: fadeIn 0.5s ease-in-out;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem 1.75rem;
+            width: 100%;
+            animation: fadeIn 0.3s ease-in-out;
         }
 
-        /* Footer */
-        footer {
-            background-color: #343a40;
-            color: #adb5bd;
-            font-size: 0.9rem;
-            margin-top: auto;
+        .main-card.main-card-fluid {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            margin: 0;
+            border-radius: 0;
+        }
+
+        /* Footer moderno al final del contenido scrolleable */
+        .app-footer {
+            background-color: #1e293b;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            border-radius: 10px;
+            padding: 1rem;
         }
 
         @@keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(6px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
-        /* Botón de Salir */
-        .btn-logout {
-            border: 1px solid rgba(255,255,255,0.4);
-            color: white;
-            border-radius: 20px;
-            padding: 0.375rem 1.2rem;
-            transition: all 0.3s;
-        }
-
-            .btn-logout:hover {
-                background-color: #dc3545;
-                border-color: #dc3545;
-                color: white;
+        /* Responsive para dispositivos móviles */
+        @@media (max-width: 991.98px) {
+            .app-sidebar {
+                display: none !important;
             }
-
-        /* --- ESTILOS DEL SIDEBAR --- */
-        .sidebar-container {
-            position: fixed;
-            top: 70px; /* Altura de tu Navbar superior */
-            left: 0;
-            bottom: 0;
-            width: 260px;
-            background: #ffffff;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-            z-index: 1000;
-            padding-top: 20px;
-            overflow-y: auto;
-            transition: all 0.3s;
-        }
-        /* Enlaces del Sidebar */
-        .sidebar-link {
-            display: flex;
-            align-items: center;
-            padding: 12px 25px;
-            color: #555;
-            text-decoration: none;
-            font-weight: 500;
-            border-radius: 0 25px 25px 0;
-            margin-right: 15px;
-            transition: all 0.3s ease;
-        }
-
-            .sidebar-link:hover, .sidebar-link.active {
-                background-color: #e3f2fd; /* Color azul muy suave */
-                color: #0d6efd; /* Azul Bootstrap */
-                padding-left: 35px; /* Efecto de deslizamiento */
-            }
-
-            .sidebar-link i {
-                font-size: 1.2rem;
-                margin-right: 15px;
-                width: 25px;
-                text-align: center;
-            }
-        /* Ocultar Sidebar en celulares para que no estorbe */
-        @@media (max-width: 992px) {
-            .sidebar-container {
-                display: none;
-            }
-
-            .cuerpo-principal {
-                margin-left: auto !important;
+            .app-main-content {
+                padding: 1rem;
             }
         }
 
+        /* Modo de impresión (tickets, facturas, comprobantes) */
+        @@media print {
+            html, body, .app-layout-wrapper, .app-body-flex, .app-main-content {
+                height: auto !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+            }
+            .app-topbar, .app-sidebar, .app-footer {
+                display: none !important;
+            }
+            .app-main-content {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        }
     </style>
 
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 
 <body class="@(ViewData["IsPrint"] as bool? == true ? "print-mode" : "")">
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
-            <div class="container">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                    <i class="bi bi-droplet-fill text-info"></i> AppLavaluc
-                </a>
+    <div class="app-layout-wrapper">
+        <!-- 1. NAVBAR SUPERIOR (100% ANCHO) -->
+        <header class="app-topbar">
+            <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+                <div class="container-fluid px-2 px-md-3">
+                    <a class="navbar-brand d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-droplet-fill text-info"></i>
+                        <span>AppLavaluc</span>
+                    </a>
 
-                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
 
-                <div class="collapse navbar-collapse" id="menuPrincipal">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">
-                                <i class="bi bi-house-door-fill"></i> Inicio
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Categoria" asp-action="Index">
-                                <i class="bi bi-tags-fill"></i> Categorías
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Servicio" asp-action="Crear">
-                                <i class="bi bi-tools"></i> Servicios
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Orden" asp-action="Crear">
-                                <i class="bi bi-plus-circle-fill"></i> Nueva Orden
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Cliente" asp-action="Index">
-                                <i class="bi bi-people-fill"></i> Clientes
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Reporte" asp-action="Index">
-                                <i class="bi bi-bar-chart-fill"></i> Reportes
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Orden" asp-action="Index">
-                                <i class="bi bi-check-circle-fill"></i> Entregas
-                            </a>
-                        </li>
-                    </ul>
+                    <div class="collapse navbar-collapse" id="menuPrincipal">
+                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Home" asp-action="Index">
+                                    <i class="bi bi-house-door-fill"></i> Inicio
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Categoria" asp-action="Index">
+                                    <i class="bi bi-tags-fill"></i> Categorías
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Servicio" asp-action="Index">
+                                    <i class="bi bi-tools"></i> Servicios
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Orden" asp-action="Crear">
+                                    <i class="bi bi-plus-circle-fill"></i> Nueva Orden
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Cliente" asp-action="Index">
+                                    <i class="bi bi-people-fill"></i> Clientes
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Reporte" asp-action="Index">
+                                    <i class="bi bi-bar-chart-fill"></i> Reportes
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Orden" asp-action="Index">
+                                    <i class="bi bi-check-circle-fill"></i> Entregas
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Comprobante" asp-action="Index">
+                                    <i class="bi bi-file-earmark-check-fill"></i> Comprobantes
+                                </a>
+                            </li>
+                        </ul>
 
-                    <div class="d-flex align-items-center gap-2">
-                        @if (User.Identity.IsAuthenticated)
-                        {
-                            <span class="navbar-text text-white me-2">¡Hola, @User.Identity.Name!</span>
-                            <form asp-controller="Cuenta" asp-action="Logout" method="post">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-logout btn-sm">
-                                    <i class="bi bi-box-arrow-right"></i> Salir
-                                </button>
-                            </form>
-                        }
-                        else
-                        {
-                            <a class="btn btn-outline-light btn-sm" asp-controller="Cuenta" asp-action="Login">
-                                <i class="bi bi-person-circle"></i> Iniciar Sesión
-                            </a>
-                        }
+                        <div class="d-flex align-items-center gap-2">
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <span class="navbar-text text-white me-2">¡Hola, @(User.Identity?.Name ?? "Usuario")!</span>
+                                <form asp-controller="Cuenta" asp-action="Logout" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-logout btn-sm">
+                                        <i class="bi bi-box-arrow-right"></i> Salir
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <a class="btn btn-outline-light btn-sm" asp-controller="Cuenta" asp-action="Login">
+                                    <i class="bi bi-person-circle"></i> Iniciar Sesión
+                                </a>
+                            }
+                        </div>
                     </div>
                 </div>
-            </div>
-        </nav>
-        <nav class="sidebar-container d-none d-lg-block">
-            <div class="px-4 mb-4">
-                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Menú Principal</small>
-            </div>
+            </nav>
+        </header>
 
-            <a class="sidebar-link" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-grid-fill"></i> Dashboard
-            </a>
+        <!-- 2. CONTENEDOR INFERIOR FLEX (ALTURA RESTANTE TOTAL 100VH) -->
+        <div class="app-body-flex">
+            <!-- SIDEBAR IZQUIERDO (ANCHO FIJO) -->
+            <aside class="app-sidebar d-none d-lg-flex flex-column">
+                <div class="mb-3">
+                    <span class="sidebar-section-title">Menú Principal</span>
+                </div>
 
-            <a class="sidebar-link" asp-controller="Orden" asp-action="Crear">
-                <i class="bi bi-plus-circle-fill text-success"></i> Nueva Orden
-            </a>
-
-            <div class="px-4 mt-4 mb-2">
-                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Gestión</small>
-            </div>
-
-            <a class="sidebar-link" asp-controller="Cliente" asp-action="Index">
-                <i class="bi bi-people"></i> Clientes
-            </a>
-
-            <a class="sidebar-link" asp-controller="Orden" asp-action="Index">
-                <i class="bi bi-receipt"></i> Órdenes Activas
-            </a>
-
-            <a class="sidebar-link" asp-controller="Orden" asp-action="Index">
-                <i class="bi bi-box-seam"></i> Entregas
-            </a>
-
-            <div class="px-4 mt-4 mb-2">
-                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Configuración</small>
-            </div>
-
-            <a class="sidebar-link" asp-controller="Servicio" asp-action="Crear">
-                <i class="bi bi-tools"></i> Servicios
-            </a>
-
-            <a class="sidebar-link" asp-controller="Categoria" asp-action="Index">
-                <i class="bi bi-tags"></i> Categorías
-            </a>
-
-            <a class="sidebar-link" asp-controller="Reporte" asp-action="Index">
-                <i class="bi bi-bar-chart-line"></i> Reportes
-            </a>
-
-            @if (User.IsInRole("Admin"))
-            {
-                <a class="sidebar-link" asp-controller="Usuario" asp-action="Index">
-                    <i class="bi bi-people-fill"></i> Gestionar Usuarios
+                <a class="sidebar-link" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-grid-fill"></i> Dashboard
                 </a>
+
+                <a class="sidebar-link" asp-controller="Orden" asp-action="Crear">
+                    <i class="bi bi-plus-circle-fill text-success"></i> Nueva Orden
+                </a>
+
+                <div class="mt-4 mb-2">
+                    <span class="sidebar-section-title">Gestión</span>
+                </div>
+
+                <a class="sidebar-link" asp-controller="Cliente" asp-action="Index">
+                    <i class="bi bi-people"></i> Clientes
+                </a>
+
+                <a class="sidebar-link" asp-controller="Orden" asp-action="Index">
+                    <i class="bi bi-receipt"></i> Órdenes Activas
+                </a>
+
+                <a class="sidebar-link" asp-controller="Orden" asp-action="Index">
+                    <i class="bi bi-box-seam"></i> Entregas
+                </a>
+
+                <a class="sidebar-link" asp-controller="Comprobante" asp-action="Index">
+                    <i class="bi bi-file-earmark-check"></i> Comprobantes SUNAT
+                </a>
+
+                <div class="mt-4 mb-2">
+                    <span class="sidebar-section-title">Configuración</span>
+                </div>
+
+                <a class="sidebar-link" asp-controller="Servicio" asp-action="Index">
+                    <i class="bi bi-tools"></i> Servicios
+                </a>
+
+                <a class="sidebar-link" asp-controller="Categoria" asp-action="Index">
+                    <i class="bi bi-tags"></i> Categorías
+                </a>
+
+                <a class="sidebar-link" asp-controller="Reporte" asp-action="Index">
+                    <i class="bi bi-bar-chart-line"></i> Reportes
+                </a>
+
+                <a class="sidebar-link" asp-controller="Empresa" asp-action="Index">
+                    <i class="bi bi-building-gear"></i> Empresa y Logo
+                </a>
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <a class="sidebar-link" asp-controller="Usuario" asp-action="Index">
+                        <i class="bi bi-people-fill"></i> Gestionar Usuarios
+                    </a>
+                }
+
+                <div class="mt-auto mx-3 p-3 bg-light rounded-3 text-center border">
+                    <i class="bi bi-headset text-primary fs-3"></i>
+                    <h6 class="fw-bold mt-2 mb-1" style="font-size: 0.85rem;">¿Soporte?</h6>
+                    <small class="text-muted d-block mb-2" style="font-size: 0.75rem;">Contacta al admin</small>
+                    <a href="#" class="btn btn-sm btn-outline-primary w-100 py-1" style="font-size: 0.75rem;">Ayuda</a>
+                </div>
+            </aside>
+
+            <!-- CONTENEDOR PRINCIPAL DERECHO (FLEX-GROW: 1, EXPANSIÓN TOTAL) -->
+            @{
+                var controllerActual = ViewContext.RouteData.Values["controller"]?.ToString();
+                bool esAnchoCompleto = (ViewData["FullWidth"] as bool? == true) ||
+                                       controllerActual == "Orden" ||
+                                       controllerActual == "Comprobante" ||
+                                       controllerActual == "Reporte";
             }
+            <main class="app-main-content">
+                <div class="app-view-container @(esAnchoCompleto ? "is-fluid" : "")">
+                    <div class="main-card @(esAnchoCompleto ? "main-card-fluid" : "")">
+                        @RenderBody()
+                    </div>
+                </div>
 
-            <div class="mt-5 mx-3 p-3 bg-light rounded-3 text-center border">
-                <i class="bi bi-headset text-primary fs-2"></i>
-                <h6 class="fw-bold mt-2">¿Soporte?</h6>
-                <small class="text-muted d-block mb-2">Contacta al admin</small>
-                <a href="#" class="btn btn-sm btn-outline-primary w-100">Ayuda</a>
-            </div>
-        </nav>
-    </header>
-
-    <div class="navbar-spacer" style="height: 70px;"></div>
-
-    <main class="container cuerpo-principal">
-        <div class="main-card">
-            @RenderBody()
+                <footer class="app-footer text-center">
+                    <p class="mb-1 fw-bold text-white">AppLavaluc &copy; @DateTime.Now.Year</p>
+                    <small class="text-white-50">
+                        Sistema de Gestión de Lavandería | <i class="bi bi-code-slash"></i> Desarrollado en ASP.NET Core
+                    </small>
+                </footer>
+            </main>
         </div>
-    </main>
-
-    <footer class="text-center py-4">
-        <div class="container">
-            <p class="mb-1 fw-bold text-white">AppLavaluc &copy; @DateTime.Now.Year</p>
-            <small class="text-white-50">
-                Sistema de Gestión de Lavandería | <i class="bi bi-code-slash"></i> Desarrollado en ASP.NET Core
-            </small>
-        </div>
-    </footer>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

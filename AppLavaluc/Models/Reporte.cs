@@ -13,7 +13,7 @@ namespace AppLavaluc.Models
         [DataType(DataType.Date)]
         public DateTime FechaFin { get; set; }
 
-        public string TipoFiltro { get; set; } // "Hoy", "Semana", "Mes", "Personalizado"
+        public string TipoFiltro { get; set; } = "Hoy"; // "Hoy", "Semana", "Mes", "Personalizado"
 
         // KPIs (Indicadores Clave)
         [Display(Name = "Total Generado")]
